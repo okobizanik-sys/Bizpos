@@ -1,0 +1,15 @@
+/* =============================================================
+   Print label base styles — screen only.
+   ALL @media print rules are injected dynamically by
+   print-label-client.tsx so that @page size can change
+   at runtime based on the user's printer selection.
+   ============================================================= */
+
+/* Screen: show the controls, hide the portal label sheet */
+.screen-only {
+  display: block;
+}
+
+.print-sheet {
+  display: none;
+}
