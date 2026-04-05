@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node server.js",
+    "start": "node server.mjs",
     "lint": "next lint",
     "migrate": "knex migrate:latest",
     "seed": "ts-node scripts/seed.ts"
@@ -87,3 +87,4 @@
     "typescript": "^5.4.5"
   }
 }
+
