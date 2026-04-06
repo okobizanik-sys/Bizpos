@@ -10,14 +10,14 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "bizpos.okobiz.com",
+        hostname: "pos.petvet-bd.com",
         port: "",
         pathname: "/images/**",
       },
       {
         protocol: "http",
         hostname: "localhost",
-        port: "3000",
+        port: "3002",
         pathname: "/**",
       },
     ],
