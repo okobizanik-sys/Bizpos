@@ -19,7 +19,7 @@ export async function createBillDetails(
   deliveryCharge: number,
   discount: number,
   customBdtAmount: number,
-  subtotal: number
+  subtotal: number,
 ) {
   try {
     await db.transaction(async (trx) => {
@@ -33,7 +33,7 @@ export async function createBillDetails(
 
       if (total === 0) {
         throw new Error(
-          "Total is 0. Ensure that the items are properly calculated."
+          "Total is 0. Ensure that the items are properly calculated.",
         );
       }
 
@@ -72,8 +72,8 @@ export async function createBillDetails(
         barcode: item.barcode,
         price: item.selling_price * item.quantity,
         cogs: Number(item.cost) * item.quantity,
-        color_id: Number(item.colorId),
-        size_id: Number(item.sizeId),
+        color_id: item.colorId ? Number(item.colorId) : null,
+        size_id: item.sizeId ? Number(item.sizeId) : null,
       }));
 
       const [insertedIds] = await trx("order_items").insert(orderItems);
@@ -254,7 +254,7 @@ export async function updateBillDetails(
   branch: Branches,
   exchangeItemList: OrderItems[],
   addExchangeItemList: OrderItems[],
-  customerData?: CustomerData
+  customerData?: CustomerData,
 ) {
   try {
     await db.transaction(async (trx) => {
@@ -270,7 +270,8 @@ export async function updateBillDetails(
       const [customer] = await trx("customers").where({ id: customerId });
       logger.info(`Customer updated: ${customer}`);
 
-      const { calculateExgTotals, subExgTotal, deliveryCharge } = usePOSStore.getState();
+      const { calculateExgTotals, subExgTotal, deliveryCharge } =
+        usePOSStore.getState();
       calculateExgTotals();
       if (!total) {
         throw new Error("Total cannot be 0");

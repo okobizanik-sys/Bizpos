@@ -3,10 +3,7 @@
 import React from "react";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "@/hooks/store/use-store";
-import {
-  getStocksByProduct,
-  getStocksCount,
-} from "@/services/stock";
+import { getStocksByProduct, getStocksCount } from "@/services/stock";
 import { StockPayload } from "../stock-transfer/transfer-products/transfer-layout";
 import {
   Table,
@@ -126,7 +123,8 @@ export const POSItemSelector = () => {
   ]);
 
   React.useEffect(() => {
-    if (!branch?.id || !exchangeOpen || orders !== null || loadingOrders) return;
+    if (!branch?.id || !exchangeOpen || orders !== null || loadingOrders)
+      return;
 
     setLoadingOrders(true);
     getOrdersWithItems({
