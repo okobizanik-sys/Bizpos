@@ -148,7 +148,7 @@ export default function LoginPage() {
       {setting?.login_image_url && (
         <Image
           src={fileUrlGenerator(setting.login_image_url)}
-          alt="Login to Bizpos"
+          alt="Login to "
           fill
           sizes="(max-width: 1024px) 0vw, 50vw"
           style={{ objectFit: "cover" }}

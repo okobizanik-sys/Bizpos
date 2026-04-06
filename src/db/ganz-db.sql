@@ -82,7 +82,6 @@ INSERT INTO `branches` (`id`, `name`, `address`, `phone`, `root`, `created_at`, 
 (3, 'Mirpur', '213/1, 60 Feet Road, Monipur, Mirpur, Dhaka', '01973590937', 0, '2025-11-05 12:56:09', '2025-11-05 12:56:09');
 
 -- --------------------------------------------------------
-
 --
 -- Table structure for table `branches_users`
 --
