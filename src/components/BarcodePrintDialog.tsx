@@ -31,7 +31,7 @@ const COMPANY =
     (process.env.NEXT_PUBLIC_COMPANY_NAME ||
       process.env.NEXT_PUBLIC_BRAND_NAME)) ||
   "YOUR COMPANY";
-
+const LOGO_URL = process.env.NEXT_PUBLIC_LOGO_URL || "";
 export function BarcodePrintDialog() {
   const [stocks, setStocks] = useState<StockForPrint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -318,6 +318,7 @@ export function BarcodePrintDialog() {
               <BarcodeLabel
                 key={`${stock.stockId}-${i}`}
                 companyName={COMPANY}
+                logoUrl={LOGO_URL}
                 productName={stock.productName}
                 sellingPrice={stock.selling_price}
                 barcodeString={stock.barcode}

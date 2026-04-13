@@ -15,6 +15,7 @@ interface PrintLabelClientProps {
   /** All stock variants for this product — each has the real stocks.barcode */
   stocks: Array<{ barcode: string; colorName: string; sizeName: string }>;
   mrp?: number;
+  logoUrl?: string;
 }
 
 const PRINTER_PRESETS = [
@@ -67,6 +68,7 @@ export default function PrintLabelClient({
   sellingPrice,
   stocks,
   mrp,
+  logoUrl,
 }: PrintLabelClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [presetKey, setPresetKey] = useState<PresetKey>("58mm");
@@ -155,6 +157,9 @@ export default function PrintLabelClient({
           </Button>
         </Link>
         <h1 className="text-xl font-semibold">{productName}</h1>
+        {logoUrl && (
+          <img src={logoUrl} alt="Company Logo" className="h-8 w-8" />
+        )}
       </div>
 
       <div className="grid gap-5">

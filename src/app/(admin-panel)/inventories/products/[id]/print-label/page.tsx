@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import db from "@/db/database";
 import PrintLabelClient from "./print-label-client";
-import "../../../../../../../styles/print-label.css";
 
 interface Props {
   params: {
@@ -11,11 +10,11 @@ interface Props {
 
 export default async function PrintLabelPage({ params }: Props) {
   const productId = Number(params.id);
-
+// const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
   if (isNaN(productId)) {
     notFound();
   }
-
+const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
   const product = await db("products")
     .select("id", "name", "selling_price")
     .where({ id: productId })
@@ -51,6 +50,7 @@ export default async function PrintLabelPage({ params }: Props) {
   return (
     <PrintLabelClient
       productId={product.id}
+      logoUrl={logoUrl}
       productName={product.name}
       sellingPrice={Number(product.selling_price)}
       stocks={stocks.map((s) => ({

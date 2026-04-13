@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Barcode from "react-barcode";
 
@@ -8,13 +10,9 @@ export interface BarcodeLabelProps {
   mrp?: number;
   barcodeString: string;
   currency?: string;
+  logoUrl?: string; // ← new optional prop
 }
 
-/**
- * A thermal-printer-ready label component.
- * Designed for 50mm × 30mm label stock.
- * Import and use styles/print-label.css on the page that contains this component.
- */
 export function BarcodeLabel({
   companyName,
   productName,
@@ -22,11 +20,27 @@ export function BarcodeLabel({
   mrp,
   barcodeString,
   currency = "৳",
+  logoUrl,
 }: BarcodeLabelProps) {
   return (
     <div className="label-wrapper">
       <div className="label">
-        <p className="company">{companyName}</p>
+        {/* Show logo image if provided, otherwise fall back to text */}
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={companyName}
+            style={{
+              maxHeight: "12mm",
+              maxWidth: "100%",
+              objectFit: "contain",
+              marginBottom: "1px",
+            }}
+          />
+        ) : (
+          <p className="company">{companyName}</p>
+        )}
+
         <p className="product-name">{productName}</p>
         <div className="price-row">
           {mrp !== undefined && mrp > sellingPrice && (

@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeftRight,
   Calendar,
   ChevronDown,
   CornerDownLeft,
@@ -62,36 +61,33 @@ interface Prop {
 }
 
 export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
-  const printerRef = React.useRef(null);
-  const slipPrinterRef = React.useRef(null);
+  const printerRef = React.useRef<HTMLDivElement>(null);
+  const slipPrinterRef = React.useRef<HTMLDivElement>(null);
+
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [orderData, setOrderData] = React.useState<OrderWithItem[] | null>(
-    null
-  );
+  const [orderData, setOrderData] = React.useState<OrderWithItem[] | null>(null);
   const [isOrderDataLoading, setIsOrderDataLoading] = React.useState(false);
+  const [settingsData, setSettingsData] = React.useState<Settings>();
+  const [shouldPrintInvoice, setShouldPrintInvoice] = React.useState(false);
+
   const { toast } = useToast();
   const branch = useStore(useBranch, (state) => state.branch);
   const form = useForm();
   const router = useRouter();
-  const [settingsData, setSettingsData] = React.useState<Settings>();
 
-  // console.log(order, "order from order dropdown");
-  // console.log(orderData, "orderData from order dropdown");
-
-  const handlePrinter = useReactToPrint({
+  const handlePrintInvoice = useReactToPrint({
     content: () => printerRef.current,
   });
 
-  const handleSlipPrinter = useReactToPrint({
+  const handlePrintSlip = useReactToPrint({
     content: () => slipPrinterRef.current,
   });
 
   const ensureOrderData = React.useCallback(async () => {
     if (orderData) return orderData;
     if (isOrderDataLoading) return null;
-
     setIsOrderDataLoading(true);
     try {
       const data = await getOrderByIdWithItems({
@@ -116,23 +112,17 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
 
   const onSubmit = async (values: any) => {
     const formData = makeFormData(values);
-
     try {
       await returnOrder(formData, order, branch);
-
       form.reset();
-
       setDialogOpen(false);
-
       toast({
         title: "Return success!",
         description: "Order returned successfully",
         variant: "default",
       });
-
       router.refresh();
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to return order!",
         description: error.message,
@@ -141,25 +131,62 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
     }
   };
 
-  const totals: TotalsOfOrder[] | undefined = orderData?.map((orderItem) => {
-    return orderItem.items.reduce(
+  const totals: TotalsOfOrder[] | undefined = orderData?.map((orderItem) =>
+    orderItem.items.reduce(
       (acc: any, item) => {
         acc.stockValue += Number(item.cost || 0);
         acc.sellValue += Number(item.sellingPrice || 0);
         acc.quantity += Number(item.quantity || 0);
         return acc;
       },
-      { stockValue: 0, sellValue: 0, quantity: 0 }
-    );
-  });
+      { stockValue: 0, sellValue: 0, quantity: 0 },
+    ),
+  );
 
   const getSafeImageSrc = (imageUrl?: string) => {
     if (!imageUrl || imageUrl === "null" || imageUrl === "undefined") return "";
     const src = fileUrlGenerator(imageUrl);
-    return src.startsWith("/") || src.startsWith("http://") || src.startsWith("https://")
+    return src.startsWith("/") ||
+      src.startsWith("http://") ||
+      src.startsWith("https://")
       ? src
       : "";
   };
+
+  const handleViewOrder = async () => {
+    await ensureOrderData();
+    setSheetOpen(true);
+  };
+
+  const handleDeliverySlip = async () => {
+    await ensureOrderData();
+    await ensureSettingsData();
+    setTimeout(() => handlePrintSlip?.(), 100);
+  };
+
+  const handlePOSInvoice = async () => {
+    setShouldPrintInvoice(true);
+    await ensureOrderData();
+    setTimeout(() => {
+      setShouldPrintInvoice((current) => {
+        if (current) {
+          handlePrintInvoice?.();
+          return false;
+        }
+        return current;
+      });
+    }, 1500);
+  };
+
+  const handleInvoiceReady = React.useCallback(() => {
+    setShouldPrintInvoice((current) => {
+      if (current) {
+        setTimeout(() => handlePrintInvoice?.(), 50);
+        return false;
+      }
+      return current;
+    });
+  }, [handlePrintInvoice]);
 
   return (
     <div>
@@ -171,48 +198,21 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem
-            onClick={async () => {
-              await ensureOrderData();
-              setSheetOpen(true);
-            }}
-            className="cursor-pointer"
-          >
+          <DropdownMenuItem onClick={handleViewOrder} className="cursor-pointer">
             <Eye size={16} /> <span className="ml-2">View Order</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={async () => {
-              await ensureOrderData();
-              await ensureSettingsData();
-              setTimeout(() => {
-                handleSlipPrinter?.();
-              }, 0);
-            }}
-            className="cursor-pointer"
-          >
-            <ReceiptText size={16} />{" "}
+          <DropdownMenuItem onClick={handleDeliverySlip} className="cursor-pointer">
+            <ReceiptText size={16} />
             <span className="ml-2">Delivery Slip</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={async () => {
-              await ensureOrderData();
-              setTimeout(() => {
-                handlePrinter?.();
-              }, 0);
-            }}
-            className="cursor-pointer"
-          >
+          <DropdownMenuItem onClick={handlePOSInvoice} className="cursor-pointer">
             <Receipt size={16} /> <span className="ml-2">POS Invoice</span>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem>
-            <ArrowLeftRight size={16} />{" "}
-            <span className="ml-2">Sales Exchange</span>
-          </DropdownMenuItem> */}
           <DropdownMenuItem
             onClick={() => setDialogOpen(true)}
             className="cursor-pointer"
           >
-            <CornerDownLeft size={16} className="text-red-600" />{" "}
+            <CornerDownLeft size={16} className="text-red-600" />
             <span className="ml-2 text-red-600">Sales Return</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -228,7 +228,7 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
             <SheetTitle>Order Details</SheetTitle>
             <Card className="w-full p-4 bg-white rounded-lg">
               <Label className="font-semibold">Customer Info</Label>
-              <div className="flex justify-between items-start ">
+              <div className="flex justify-between items-start">
                 <div className="w-2/3">
                   <p className="flex justify-start items-center gap-2">
                     <FaUser size={13} className="text-slate-400" />
@@ -259,6 +259,7 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
               </div>
             </Card>
           </SheetHeader>
+
           {orderData?.map((orderItem) =>
             orderItem.items.map((item, index) => (
               <Card
@@ -279,65 +280,47 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
                   </div>
                   <div className="w-2/3">
                     <p>{item.productName}</p>
-                    <p>
-                      <span className="text-gray-500">Barcode:</span>{" "}
-                      {item.barcode}
-                    </p>
-                    <p>
-                      <span className="text-gray-500">Level / Size:</span>{" "}
-                      {item.sizeName}
-                    </p>
-                    <p>
-                      <span className="text-gray-500">Color:</span>
-                      {item.colorName}
-                    </p>
+                    <p><span className="text-gray-500">Barcode:</span> {item.barcode}</p>
+                    <p><span className="text-gray-500">Level / Size:</span> {item.sizeName}</p>
+                    <p><span className="text-gray-500">Color:</span> {item.colorName}</p>
                   </div>
                 </div>
-
                 <div className="col-span-1 flex flex-col justify-start items-end">
                   <p>{item.sellingPrice}</p>
-                  <p>
-                    <span className="text-gray-500">Qty:</span> {item.quantity}
-                  </p>
+                  <p><span className="text-gray-500">Qty:</span> {item.quantity}</p>
                 </div>
-
                 <div className="col-span-1 flex justify-end items-start">
                   {item.sellingPrice * item.quantity}
                 </div>
               </Card>
-            ))
+            )),
           )}
+
           {totals?.map((total, index) => (
             <Card key={index} className="bg-white rounded-lg mt-6 p-4 w-full">
               <Label className="font-semibold">Payment Summary</Label>
               <p className="flex justify-between items-center">
-                <span className="text-gray-500">Subtotal</span>{" "}
-                {order.sub_total === null ? 0 : order.sub_total}
+                <span className="text-gray-500">Subtotal</span>
+                {order.sub_total ?? 0}
               </p>
               <p className="flex justify-between items-center">
-                <span className="text-gray-500">Delivery Charge</span>{" "}
-                {order.delivery_charge === null ? 0 : order.delivery_charge}
+                <span className="text-gray-500">Delivery Charge</span>
+                {order.delivery_charge ?? 0}
               </p>
               <p className="flex justify-between items-center">
-                <span className="text-gray-500">Discount</span>{" "}
-                {order.discount === null ? 0 : order.discount}
-              </p>
-              {/* <p className="flex justify-between items-center">
-                <span className="text-gray-500">VAT</span>{" "}
-                {order.vat === null ? 0 : order.vat}
-              </p> */}
-              <p className="flex justify-between items-center">
-                <span className="text-gray-500">Advance Amount</span>{" "}
-                {order.paid_amount === null ? 0 : order.paid_amount}
+                <span className="text-gray-500">Discount</span>
+                {order.discount ?? 0}
               </p>
               <p className="flex justify-between items-center">
-                <span className="text-gray-500">Due Amount</span>{" "}
-                {order.due_amount === null ? 0 : order.due_amount}
+                <span className="text-gray-500">Advance Amount</span>
+                {order.paid_amount ?? 0}
               </p>
               <p className="flex justify-between items-center">
-                <span className="text-gray-500">
-                  Total ({total.quantity} items)
-                </span>
+                <span className="text-gray-500">Due Amount</span>
+                {order.due_amount ?? 0}
+              </p>
+              <p className="flex justify-between items-center">
+                <span className="text-gray-500">Total ({total.quantity} items)</span>
                 {order.total}
               </p>
             </Card>
@@ -370,9 +353,7 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" variant="default">
-                    Return
-                  </Button>
+                  <Button type="submit" variant="default">Return</Button>
                 </form>
               </Form>
             </DialogDescription>
@@ -381,7 +362,7 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
       </Dialog>
 
       {/* Print Invoice */}
-      <div className="hidden">
+      <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {orderData && (
           <PrintInvoice
             ref={printerRef}
@@ -389,12 +370,13 @@ export const OrdersDropdown: React.FC<Prop> = ({ order }) => {
             order={order}
             existingBranch={branch}
             totals={totals}
+            onReady={handleInvoiceReady}
           />
         )}
       </div>
 
       {/* Print Delivery Slip */}
-      <div className="hidden">
+      <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {orderData && settingsData && (
           <PrintDeliverySlip
             ref={slipPrinterRef}

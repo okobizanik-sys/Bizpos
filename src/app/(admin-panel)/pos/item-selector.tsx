@@ -152,7 +152,6 @@ export const POSItemSelector = () => {
         const itemInList = itemList.find((item) => item.barcode === code);
         setQtyLimit(itemInList ? data - itemInList.quantity : data);
       });
-
       const stock = stocks.find((stock) => stock.barcode === code);
       if (stock) {
         addItem({
@@ -183,7 +182,6 @@ export const POSItemSelector = () => {
       }
     }
   };
-
   const barcodeExchangeSelected = (code: string | null | void) => {
     if (code) {
       setSelectedBarcode(code);

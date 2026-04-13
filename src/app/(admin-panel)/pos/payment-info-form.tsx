@@ -7,11 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -75,21 +73,16 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
   branch,
 }) => {
   const { toast } = useToast();
-  const printerRef = React.useRef(null);
+  const printerRef = React.useRef<HTMLDivElement>(null);
+
   const [loading, setLoading] = React.useState(false);
   const [cod, setCod] = React.useState<number>(total);
-  const [paymentMethods, setPaymentMethods] = React.useState<PaymentMethods[]>(
-    []
-  );
+  const [paymentMethods, setPaymentMethods] = React.useState<PaymentMethods[]>([]);
   const [order, setOrder] = React.useState<Orders>();
-  const [printDeliverySlip, setPrintDeliverySlip] =
-    React.useState<boolean>(false);
-  const [printInvoice, setPrintInvoice] = React.useState<boolean>(false);
-  const [orderTotalData, setOrderData] = React.useState<OrderWithItem[] | null>(
-    []
-  );
-
-  console.log(orderId, order, "order from payment info form ...............");
+  const [printDeliverySlip, setPrintDeliverySlip] = React.useState(false);
+  const [printInvoice, setPrintInvoice] = React.useState(false);
+  const [shouldPrintInvoice, setShouldPrintInvoice] = React.useState(false);
+  const [orderTotalData, setOrderData] = React.useState<OrderWithItem[] | null>([]);
 
   React.useEffect(() => {
     getPaymentMethods().then((data) => setPaymentMethods(data));
@@ -97,7 +90,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
 
   React.useEffect(() => {
     getOrderByOrderId(orderId).then((data) => setOrder(data));
-
     getOrderByIdWithItems({
       where: { "orders.order_id": orderId },
     }).then((data) => {
@@ -105,21 +97,16 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
     });
   }, [printInvoice, orderId]);
 
-  // console.log(orderId, "orderId from payment");
-  // console.log(order, "order from payment");
-
-  const totals: TotalsOfOrder[] | undefined = orderTotalData?.map(
-    (orderItem) => {
-      return orderItem.items.reduce(
-        (acc: any, item) => {
-          acc.stockValue += Number(item.cost || 0);
-          acc.sellValue += Number(item.sellingPrice || 0);
-          acc.quantity += Number(item.quantity || 0);
-          return acc;
-        },
-        { stockValue: 0, sellValue: 0, quantity: 0 }
-      );
-    }
+  const totals: TotalsOfOrder[] | undefined = orderTotalData?.map((orderItem) =>
+    orderItem.items.reduce(
+      (acc: any, item) => {
+        acc.stockValue += Number(item.cost || 0);
+        acc.sellValue += Number(item.sellingPrice || 0);
+        acc.quantity += Number(item.quantity || 0);
+        return acc;
+      },
+      { stockValue: 0, sellValue: 0, quantity: 0 },
+    ),
   );
 
   const form = useForm<PaymentFormValues>({
@@ -135,7 +122,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
     form.setValue("dueAmount", total);
   }, [total, form]);
 
-  // Make sure cod is updated when total changes
   React.useEffect(() => {
     setCod(total);
   }, [total]);
@@ -154,9 +140,18 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
     content: () => printerRef.current,
   });
 
+  // onReady callback from PrintInvoice — fires when logo canvas is ready
+  const handleInvoiceReady = React.useCallback(() => {
+    setShouldPrintInvoice((current) => {
+      if (current) {
+        setTimeout(() => handleInvoicePrinter?.(), 50);
+        return false;
+      }
+      return current;
+    });
+  }, [handleInvoicePrinter]);
+
   const handleSubmit = async (values: PaymentFormValues) => {
-    // Mock action or API call
-    // console.log("Payment Data Submitted:", values);
     const formData = makeFormData(values);
     try {
       const result = await updatePaymentInfo(orderId, formData);
@@ -169,10 +164,24 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
           handleDeliverySlipPrint();
           setPrintDeliverySlip(false);
         }
+
         if (printInvoice) {
-          handleInvoicePrinter();
+          // Instead of calling handleInvoicePrinter directly,
+          // set flag — onReady will fire the print when logo is ready
+          setShouldPrintInvoice(true);
           setPrintInvoice(false);
+          // Fallback: if onReady doesn't fire (logo already loaded), print after delay
+          setTimeout(() => {
+            setShouldPrintInvoice((current) => {
+              if (current) {
+                handleInvoicePrinter?.();
+                return false;
+              }
+              return current;
+            });
+          }, 1500);
         }
+
         setTimeout(() => {
           window.location.reload();
         }, 7000);
@@ -195,16 +204,13 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        {/* <DialogTrigger asChild>
-        <Button>Open Payment Form</Button>
-      </DialogTrigger> */}
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-center font-bold">
               Payment Details
             </DialogTitle>
           </DialogHeader>
-          <div className="">
+          <div>
             <Card className="flex w-full justify-center items-center py-2 cursor-pointer bg-black text-white">
               <p className="text-2xl">৳{total}</p>
             </Card>
@@ -229,9 +235,9 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
                           <SelectValue placeholder="Select payment method" />
                         </SelectTrigger>
                         <SelectContent>
-                          {(paymentMethods.length === 0 && (
+                          {paymentMethods.length === 0 ? (
                             <p>Loading payment methods...</p>
-                          )) ||
+                          ) : (
                             paymentMethods.map((method) => (
                               <SelectItem
                                 key={method.id}
@@ -240,7 +246,8 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
                               >
                                 {method.name}
                               </SelectItem>
-                            ))}
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -257,9 +264,7 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
                       <Input
                         placeholder="Enter advance amount"
                         {...field}
-                        onChange={(e) =>
-                          handleAdvanceChange(e.target.value, total)
-                        }
+                        onChange={(e) => handleAdvanceChange(e.target.value, total)}
                       />
                     </FormControl>
                   </FormItem>
@@ -291,7 +296,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
                 >
                   Submit & Print Delivery Slip
                 </Button>
-
                 <Button
                   type="submit"
                   variant="default"
@@ -306,7 +310,8 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
         </DialogContent>
       </Dialog>
 
-      <div className="hidden">
+      {/* Delivery Slip */}
+      <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         <DeliverySlip
           ref={componentRef}
           orderData={orderData}
@@ -318,7 +323,7 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
       </div>
 
       {/* Print Invoice */}
-      <div className="hidden">
+      <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {order && (
           <PrintInvoice
             ref={printerRef}
@@ -326,6 +331,7 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
             order={order}
             existingBranch={branch}
             totals={totals}
+            onReady={handleInvoiceReady}
           />
         )}
       </div>
