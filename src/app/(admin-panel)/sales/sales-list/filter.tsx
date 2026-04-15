@@ -19,6 +19,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 const defaultValues = {
   search: "",
+  saleChannel: "ALL",
   fromDate: undefined,
   toDate: undefined,
 };
@@ -26,6 +27,7 @@ const defaultValues = {
 interface FilterSalesFormProps {
   currentFilters: {
     search?: string;
+    saleChannel?: string;
     fromDate?: Date;
     toDate?: Date;
   };
@@ -46,6 +48,9 @@ export const FilterSalesForm: React.FC<FilterSalesFormProps> = ({
     const query = new URLSearchParams();
 
     if (data.search) query.set("search", data.search);
+    if (data.saleChannel && data.saleChannel !== "ALL") {
+      query.set("saleChannel", data.saleChannel);
+    }
     if (data.fromDate)
       query.set("fromDate", new Date(data.fromDate).toISOString());
     if (data.toDate) query.set("toDate", new Date(data.toDate).toISOString());
@@ -63,9 +68,9 @@ export const FilterSalesForm: React.FC<FilterSalesFormProps> = ({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="w-full flex gap-2 items-center justify-between"
+          className="flex w-full flex-wrap items-center justify-between gap-2"
         >
-          <div className="w-4/6 flex justify-start items-center gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
             <FormField
               name="search"
               control={form.control}
@@ -73,8 +78,30 @@ export const FilterSalesForm: React.FC<FilterSalesFormProps> = ({
                 <Input
                   {...field}
                   placeholder="Search by Order ID/Customer Name/Phone"
-                  className="w-2/5"
+                  className="min-w-[240px] flex-1"
                 />
+              )}
+            />
+
+            <FormField
+              name="saleChannel"
+              control={form.control}
+              render={({ field }) => (
+                <div className="min-w-[160px]">
+                  <Select
+                    value={String(field.value || "ALL")}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sale Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Sales</SelectItem>
+                      <SelectItem value="OFFLINE">Offline</SelectItem>
+                      <SelectItem value="ONLINE">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             />
 
@@ -86,7 +113,7 @@ export const FilterSalesForm: React.FC<FilterSalesFormProps> = ({
                   selected={field.value}
                   onChange={field.onChange}
                   placeholderText="From Date"
-                  className="w-1/5"
+                  className="min-w-[160px]"
                 />
               )}
             />
@@ -98,12 +125,12 @@ export const FilterSalesForm: React.FC<FilterSalesFormProps> = ({
                   selected={field.value}
                   onChange={field.onChange}
                   placeholderText="To Date"
-                  className="w-1/5"
+                  className="min-w-[160px]"
                 />
               )}
             />
           </div>
-          <div className="w-2/6 flex justify-end items-center gap-2">
+          <div className="flex items-center gap-2">
             <SubmitButton>Search</SubmitButton>
             <Button type="button" variant="outline" onClick={onReset}>
               Reset Filters

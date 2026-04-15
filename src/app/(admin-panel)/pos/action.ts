@@ -9,6 +9,7 @@ import { CustomerData } from "./exchange-form";
 import db from "@/db/database";
 import { toUpperCaseWords } from "@/utils/helpers";
 import { updateOrderByOrderId } from "@/services/order";
+import { ensureSalesSchema } from "@/services/supplier";
 
 export async function createBillDetails(
   formData: FormData,
@@ -22,6 +23,8 @@ export async function createBillDetails(
   subtotal: number,
 ) {
   try {
+    await ensureSalesSchema();
+
     await db.transaction(async (trx) => {
       const { calculateTotals } = usePOSStore.getState();
 
@@ -57,6 +60,10 @@ export async function createBillDetails(
         delivery_charge: Number(deliveryCharge),
         discount: Number(discount) + Number(customBdtAmount),
         sub_total: Number(subtotal),
+        sale_channel:
+          (String(formData.get("saleChannel") || "OFFLINE").toUpperCase() as
+            | "ONLINE"
+            | "OFFLINE"),
       };
 
       const [insertOrderResult] = await trx("orders").insert(orderData);
@@ -85,27 +92,44 @@ export async function createBillDetails(
       logger.info(`Items created ${orderItem}`);
       // ✅ Update Stocks Instead of Deleting Rows
       for (const item of itemList) {
-        const stock = await trx("stocks")
+        const stocks = await trx("stocks")
           .where({
             product_id: item.productId,
             branch_id: Number(branch.id),
             barcode: item.barcode,
           })
-          .first(); // Fetch the stock entry
+          .andWhere({ condition: "new" })
+          .orderBy("created_at", "asc");
 
-        if (!stock || stock.quantity < item.quantity) {
+        const totalAvailable = stocks.reduce(
+          (sum: number, stock: { quantity: number }) =>
+            sum + Number(stock.quantity),
+          0
+        );
+
+        if (!stocks.length || totalAvailable < item.quantity) {
           throw new Error(`Insufficient stock for barcode: ${item.barcode}`);
         }
 
-        // Deduct sold quantity
-        const newQuantity = stock.quantity - item.quantity;
+        let remainingQuantity = item.quantity;
 
-        if (newQuantity > 0) {
-          await trx("stocks")
-            .where({ id: stock.id })
-            .update({ quantity: newQuantity, updated_at: new Date() });
-        } else {
-          await trx("stocks").where({ id: stock.id }).delete();
+        for (const stock of stocks) {
+          if (remainingQuantity <= 0) break;
+
+          const deductQuantity = Math.min(
+            Number(stock.quantity),
+            remainingQuantity
+          );
+          const newQuantity = Number(stock.quantity) - deductQuantity;
+          remainingQuantity -= deductQuantity;
+
+          if (newQuantity > 0) {
+            await trx("stocks")
+              .where({ id: stock.id })
+              .update({ quantity: newQuantity, updated_at: new Date() });
+          } else {
+            await trx("stocks").where({ id: stock.id }).delete();
+          }
         }
       }
 
@@ -300,21 +324,44 @@ export async function updateBillDetails(
 
       // Handle exchanged items (reduce stock instead of deleting rows)
       for (const item of addExchangeItemList) {
-        const existingStock = await trx("stocks")
+        const existingStocks = await trx("stocks")
           .where({
             barcode: item.barcode,
             branch_id: Number(branch.id),
           })
-          .first();
+          .andWhere({ condition: "new" })
+          .orderBy("created_at", "asc");
 
-        if (!existingStock || existingStock.quantity < item.quantity) {
+        const totalAvailable = existingStocks.reduce(
+          (sum: number, stock: { quantity: number }) =>
+            sum + Number(stock.quantity),
+          0
+        );
+
+        if (!existingStocks.length || totalAvailable < item.quantity) {
           throw new Error("Insufficient stock for exchange");
         }
 
-        // Reduce stock quantity
-        await trx("stocks")
-          .where({ id: existingStock.id })
-          .update({ quantity: existingStock.quantity - item.quantity });
+        let remainingQuantity = item.quantity;
+
+        for (const stock of existingStocks) {
+          if (remainingQuantity <= 0) break;
+
+          const deductQuantity = Math.min(
+            Number(stock.quantity),
+            remainingQuantity
+          );
+          const newQuantity = Number(stock.quantity) - deductQuantity;
+          remainingQuantity -= deductQuantity;
+
+          if (newQuantity > 0) {
+            await trx("stocks")
+              .where({ id: stock.id })
+              .update({ quantity: newQuantity, updated_at: new Date() });
+          } else {
+            await trx("stocks").where({ id: stock.id }).delete();
+          }
+        }
 
         // Update or insert order items
         const existingOrderItem = await trx("order_items")

@@ -68,7 +68,7 @@ export type OrderWithItem = {
   total?: number;
 };
 
-export const POSItemSelector = () => {
+export const POSItemSelector: React.FC = () => {
   const branch = useStore(useBranch, (state) => state.branch);
   const {
     itemList,
@@ -602,7 +602,7 @@ export const POSItemSelector = () => {
                 <p className="text-base opacity-80 font-normal">#{orderId}</p>
               )}
             </div>
-            <BillDetailsForm />
+          <BillDetailsForm />
           </Card>
         )}
       </div>

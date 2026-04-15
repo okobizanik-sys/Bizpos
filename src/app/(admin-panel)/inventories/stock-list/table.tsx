@@ -116,9 +116,9 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
   });
 
   React.useEffect(() => {
-    const totalStockQty = getTotalFromTable(table, 5) as number;
-    const totalStockValue = getTotalFromTable(table, 6) as number;
-    const totalSellValue = getTotalFromTable(table, 7) as number;
+    const totalStockQty = getTotalFromTable(table, 6) as number;
+    const totalStockValue = getTotalFromTable(table, 7) as number;
+    const totalSellValue = getTotalFromTable(table, 8) as number;
     calculateTotalStockQty(totalStockQty);
     calculateTotalStockValue(totalStockValue);
     calculateTotalSellValue(totalSellValue);
@@ -219,12 +219,12 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={5} className="text-right">
+            <TableCell colSpan={6} className="text-right">
               Totals:
             </TableCell>
-            <TableCell>{getTotalFromTable(table, 5)}</TableCell>
             <TableCell>{getTotalFromTable(table, 6)}</TableCell>
             <TableCell>{getTotalFromTable(table, 7)}</TableCell>
+            <TableCell>{getTotalFromTable(table, 8)}</TableCell>
             <TableCell></TableCell>
           </TableRow>
         </TableFooter>

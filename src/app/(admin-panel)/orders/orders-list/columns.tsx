@@ -70,6 +70,11 @@ export const columns: ColumnDef<Orders>[] = [
     accessorKey: "total",
   },
   {
+    header: "Sale Type",
+    accessorKey: "sale_channel",
+    cell: ({ row }) => row.original.sale_channel || "OFFLINE",
+  },
+  {
     header: "Due Amount",
     accessorKey: "due_amount",
   },

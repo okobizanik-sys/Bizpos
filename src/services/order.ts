@@ -5,6 +5,7 @@ import { logger } from "../lib/winston";
 import { OrderItem, OrderItems, Orders } from "@/types/shared";
 import { OrderWithItem } from "@/app/(admin-panel)/pos/item-selector";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
+import { ensureSalesSchema } from "./supplier";
 
 // Create a new order
 export async function createOrder(data: Orders) {
@@ -62,16 +63,28 @@ export async function createOrder(data: Orders) {
 export async function getOrders(
   filters: OrderFilter & { page?: number; per_page?: number; branchId?: number }
 ): Promise<Orders[]> {
-  const { search, status, fromDate, toDate, page = 1, per_page = 20 } = filters;
+  await ensureSalesSchema();
+
+  const {
+    search,
+    status,
+    saleChannel,
+    fromDate,
+    toDate,
+    page = 1,
+    per_page = 20,
+  } = filters;
   const offset = (page - 1) * per_page;
 
   const query = db("orders")
     .leftJoin("customers", "orders.customer_id", "customers.id")
+    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
     .select(
       "orders.*",
       "customers.customer",
       "customers.phone",
-      "customers.address"
+      "customers.address",
+      "suppliers.name as supplierName"
     )
     // .where("orders.branch_id", filters.branchId)
     .orderBy("date", "desc")
@@ -92,6 +105,10 @@ export async function getOrders(
     } else {
       query.andWhere("orders.status", status);
     }
+  }
+
+  if (saleChannel && saleChannel !== "ALL") {
+    query.andWhere("orders.sale_channel", saleChannel);
   }
 
   if (fromDate) {
@@ -145,13 +162,17 @@ export async function getOrdersByCustomer(
 }
 
 export async function getOrderByOrderId(orderId: string): Promise<Orders> {
+  await ensureSalesSchema();
+
   const query = db("orders")
     .leftJoin("customers", "orders.customer_id", "customers.id")
+    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
     .select(
       "orders.*",
       "customers.customer",
       "customers.phone",
-      "customers.address"
+      "customers.address",
+      "suppliers.name as supplierName"
     )
     .where("orders.order_id", orderId)
     .orderBy("date", "desc")

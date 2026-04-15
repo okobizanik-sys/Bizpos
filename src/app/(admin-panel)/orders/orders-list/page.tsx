@@ -13,6 +13,7 @@ export type OrderFilter = {
   status?: string;
   fromDate?: Date;
   toDate?: Date;
+  saleChannel?: string;
 };
 
 interface Props {
@@ -37,6 +38,9 @@ export default async function OrderPage({ searchParams }: Props) {
   const filter: OrderFilter = {
     search: searchParams.search as string,
     status: searchParams.status ? (searchParams.status as string) : "ALL",
+    saleChannel: searchParams.saleChannel
+      ? (searchParams.saleChannel as string)
+      : "ALL",
     fromDate: searchParams.fromDate
       ? new Date(searchParams.fromDate as string)
       : undefined,

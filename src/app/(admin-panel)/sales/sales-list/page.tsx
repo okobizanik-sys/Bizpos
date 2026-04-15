@@ -18,6 +18,9 @@ interface Props {
 export default async function SalesPage({ searchParams }: Props) {
   const filter: OrderFilter = {
     search: searchParams.search as string,
+    saleChannel: searchParams.saleChannel
+      ? (searchParams.saleChannel as string)
+      : "ALL",
     fromDate: searchParams.fromDate
       ? new Date(searchParams.fromDate as string)
       : undefined,

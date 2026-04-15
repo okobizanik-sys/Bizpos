@@ -55,6 +55,10 @@ export type Stocks = {
   size_id: number;
   cost: number;
   quantity: number;
+  product_date?: Date;
+  shelf_life?: number;
+  expire_date?: Date;
+  supplier_name?: string;
 };
 
 export type StockHistory = {
@@ -64,6 +68,12 @@ export type StockHistory = {
   variant: string;
   quantity: number;
   cost_per_item: number;
+  paid_amount?: number;
+  due_amount?: number;
+  product_date?: Date;
+  shelf_life?: number;
+  expire_date?: Date;
+  supplier_name?: string;
   created_at: Date;
   productName: string;
   productSku: string;
@@ -93,6 +103,16 @@ export type Customers = {
   remarks?: string;
 };
 
+export type Supplier = {
+  id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
 export type Orders = {
   id?: number;
   order_id: string;
@@ -112,6 +132,9 @@ export type Orders = {
   due_amount?: number;
   sub_total?: number;
   payment_method?: string;
+  sale_channel?: "ONLINE" | "OFFLINE";
+  supplier_id?: number | null;
+  supplierName?: string | null;
 };
 
 export type OrderItem = {
@@ -169,6 +192,9 @@ export type SalesData = {
   due_amount?: number;
   payment_method?: string;
   sub_total?: number;
+  sale_channel?: "ONLINE" | "OFFLINE";
+  supplier_id?: number | null;
+  supplierName?: string | null;
 };
 
 export type DashboardSalesData = {

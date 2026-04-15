@@ -130,11 +130,11 @@ export function getTotalFromTable<T>(table: Table<T>, index: number) {
       const product = row.original as ProductWithStockPayload;
 
       // Ensure the correct index is used for calculations
-      if (index === 6) {
+      if (index === 7) {
         return product.cost * product.quantity; // Stock Value
-      } else if (index === 7) {
+      } else if (index === 8) {
         return product.selling_price * product.quantity; // Sell Value
-      } else if (index === 5) {
+      } else if (index === 6) {
         return product.quantity; // Stock Quantity
       }
 

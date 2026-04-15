@@ -31,6 +31,16 @@ export const columns: ColumnDef<SalesData>[] = [
     accessorKey: "phone", // Matches SalesData
   },
   {
+    header: "Sale Type",
+    accessorKey: "sale_channel",
+    cell: ({ row }) => row.original.sale_channel || "OFFLINE",
+  },
+  {
+    header: "Supplier",
+    accessorKey: "supplierName",
+    cell: ({ row }) => row.original.supplierName || "-",
+  },
+  {
     header: "Total",
     accessorKey: "total", // Matches SalesData
   },

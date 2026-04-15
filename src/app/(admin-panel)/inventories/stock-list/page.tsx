@@ -13,6 +13,7 @@ export type ProductWithStockPayload = {
   selling_price: number;
   barcode: string;
   cost: number;
+  supplier_name?: string | null;
   categoryName: string;
   sizeName?: string;
   colorName?: string;

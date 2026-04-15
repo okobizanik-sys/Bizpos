@@ -2,6 +2,7 @@ import db from "@/db/database";
 import { logger } from "../lib/winston";
 import { DashboardSalesData, SalesData, SalesSummary } from "@/types/shared";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
+import { ensureSalesSchema } from "./supplier";
 
 export type DashboardFilterType = "today" | "week" | "month" | "lifetime";
 export type DashboardSummary = {
@@ -102,7 +103,9 @@ export type DashboardSummary = {
 // }
 
 export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
-  const { fromDate, toDate, search } = filters;
+  await ensureSalesSchema();
+
+  const { fromDate, toDate, search, saleChannel } = filters;
 
   const cogsSubquery = db("order_items")
     .select("order_id")
@@ -131,8 +134,11 @@ export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
     .whereIn("orders.status", ["COMPLETED", "EXCHANGED"])
     .leftJoin("branches", "orders.branch_id", "branches.id")
     .leftJoin("customers", "orders.customer_id", "customers.id")
+    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
     .leftJoin(cogsSubquery, "order_cogs.order_id", "orders.id")
     .orderBy("orders.date", "desc");
+
+  query.select("orders.sale_channel", "orders.supplier_id", "suppliers.name as supplierName");
 
   if (search) {
     query.andWhere((builder) => {
@@ -141,6 +147,10 @@ export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
         .orWhere("customers.phone", "Like", `%${search}%`)
         .orWhere("orders.order_id", "Like", `%${search}%`);
     });
+  }
+
+  if (saleChannel && saleChannel !== "ALL") {
+    query.andWhere("orders.sale_channel", saleChannel);
   }
 
   if (fromDate && toDate) {

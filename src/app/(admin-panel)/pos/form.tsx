@@ -24,30 +24,16 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useReactToPrint } from "react-to-print";
-import DeliverySlip from "@/components/delivery-slip/page";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Award,
   BadgePercent,
-  CircleAlert,
-  CircleCheckBig,
   TruckIcon,
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useStore } from "zustand";
 import { useBranch } from "@/hooks/store/use-branch";
 import { getCustomers, getCustomersWithOrders } from "@/services/customer";
@@ -57,6 +43,7 @@ import { FaCircleCheck } from "react-icons/fa6";
 import { IoWarning } from "react-icons/io5";
 import { AdvancedPaymentForm } from "./payment-info-form";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const defaultValues = {
   phone: "",
@@ -82,24 +69,18 @@ export const BillDetailsForm: React.FC = () => {
     customerAddress: "",
     date: "",
   });
-  const [paymentAmount, setPaymentAmount] = React.useState(0);
-  const [dueAmount, setDueAmount] = React.useState(0);
-  const [changeAmount, setChangeAmount] = React.useState(0);
-
   const { toast } = useToast();
   const {
     subtotal,
     totalQty,
     discount,
     deliveryCharge,
-    vatRate,
     total,
     setCustomerDetails,
     itemList,
     setDeliveryCharge,
     setDiscountAmount,
     setBdtDiscountAmount,
-    resetItemList,
     orderId,
   } = usePOSStore();
 
@@ -123,6 +104,9 @@ export const BillDetailsForm: React.FC = () => {
   const [customDiscount, setCustomDiscount] = React.useState<number | "">(0);
   const [customBdtDiscount, setCustomBdtDiscount] = React.useState<number | "">(
     0
+  );
+  const [saleChannel, setSaleChannel] = React.useState<"ONLINE" | "OFFLINE">(
+    "OFFLINE"
   );
   // console.log(customerData, "customer data from pos form");
 
@@ -197,6 +181,7 @@ export const BillDetailsForm: React.FC = () => {
   const onSubmit = async (values: z.infer<typeof billFormSchema>) => {
     setLoading(true);
     const formData = makeFormData(values);
+    formData.set("saleChannel", saleChannel);
 
     const currentTotal = usePOSStore.getState().total;
 
@@ -229,7 +214,6 @@ export const BillDetailsForm: React.FC = () => {
       setDialogOpen(true);
 
       form.reset();
-      // resetItemList();
     } catch (error: any) {
       // console.error(error);
       toast({
@@ -239,22 +223,6 @@ export const BillDetailsForm: React.FC = () => {
       });
     }
     setLoading(false);
-  };
-
-  const handlePaymentAmountChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const amount = parseFloat(event.target.value) || 0;
-    setPaymentAmount(amount);
-
-    const calculatedDue = total - amount;
-    if (calculatedDue > 0) {
-      setDueAmount(calculatedDue);
-      setChangeAmount(0);
-    } else {
-      setDueAmount(0);
-      setChangeAmount(Math.abs(calculatedDue));
-    }
   };
 
   return (
@@ -355,12 +323,6 @@ export const BillDetailsForm: React.FC = () => {
                 {discountAmount || customBdtDiscount}
               </CardTitle>
             </Card>
-            {/* <Card className="opacity-50">
-              <CardHeader>
-                <p>VAT</p>
-                <CardTitle className="text-xl">৳{vatRate}</CardTitle>
-              </CardHeader>
-            </Card> */}
             <Card className=" flex flex-col justify-center items-start p-3 gap-3 bg-[#F4F4F4]">
               <p className="text-xs text-[#828282]">Delivery</p>
               <CardTitle className="text-xl">৳{deliveryCharge}</CardTitle>
@@ -374,6 +336,30 @@ export const BillDetailsForm: React.FC = () => {
               <CardTitle className="text-xl">৳{total}</CardTitle>
             </Card>
           </div>
+
+          <Card className="mt-4 p-4 bg-[#F4F8F3]">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <Label className="mb-3 block">Sales Category</Label>
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2 rounded border px-3 py-2">
+                    <Checkbox
+                      checked={saleChannel === "OFFLINE"}
+                      onCheckedChange={() => setSaleChannel("OFFLINE")}
+                    />
+                    <span>Offline Sale</span>
+                  </label>
+                  <label className="flex items-center gap-2 rounded border px-3 py-2">
+                    <Checkbox
+                      checked={saleChannel === "ONLINE"}
+                      onCheckedChange={() => setSaleChannel("ONLINE")}
+                    />
+                    <span>Online Sale</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </Card>
 
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="flex flex-col justify-center items-center gap-2 h-16 ">

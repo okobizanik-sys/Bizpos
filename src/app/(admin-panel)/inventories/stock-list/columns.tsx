@@ -49,6 +49,11 @@ export const columns: ColumnDef<ProductWithStockPayload>[] = [
     accessorKey: "categoryName",
   },
   {
+    header: "Supplier",
+    accessorKey: "supplier_name",
+    cell: ({ row }) => row.original.supplier_name || "-",
+  },
+  {
     header: "In Stock",
     accessorKey: "quantity",
   },

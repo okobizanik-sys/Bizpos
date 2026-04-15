@@ -7,6 +7,14 @@ import {
 import db from "@/db/database";
 import { logger } from "@/lib/winston";
 
+function applyNullableWhere(query: any, column: string, value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    query.whereNull(column);
+  } else {
+    query.where(column, value);
+  }
+}
+
 export async function createStock(
   data: {
     product_id: number;
@@ -17,15 +25,32 @@ export async function createStock(
     cost: number;
     quantity: number;
     condition?: string;
+    product_date?: string | null;
+    shelf_life?: number | null;
+    expire_date?: string | null;
+    supplier_name?: string | null;
   },
   trx?: any
 ) {
   const dbs = trx || db;
 
-  // Check if barcode exists
+  // Match by stock batch so different suppliers remain separate rows.
   const existingStock = await dbs("stocks")
-    .where({ barcode: data.barcode })
-    .first(); // Get a single existing entry
+    .where({
+      product_id: data.product_id,
+      branch_id: data.branch_id,
+      barcode: data.barcode,
+      condition: data.condition || "new",
+    })
+    .modify((query: any) => {
+      applyNullableWhere(query, "color_id", data.color_id);
+      applyNullableWhere(query, "size_id", data.size_id);
+      applyNullableWhere(query, "supplier_name", data.supplier_name);
+      applyNullableWhere(query, "product_date", data.product_date);
+      applyNullableWhere(query, "shelf_life", data.shelf_life);
+      applyNullableWhere(query, "expire_date", data.expire_date);
+    })
+    .first();
 
   if (existingStock) {
     // Compute new average cost
@@ -37,10 +62,14 @@ export async function createStock(
 
     // Update the existing stock entry with new cost & quantity
     await dbs("stocks")
-      .where({ barcode: data.barcode })
+      .where({ id: existingStock.id })
       .update({
         cost: Math.round(newAverageCost),
         quantity: newTotalQuantity,
+        product_date: data.product_date || null,
+        shelf_life: data.shelf_life ?? null,
+        expire_date: data.expire_date || null,
+        supplier_name: data.supplier_name || null,
         updated_at: new Date(),
       });
 
@@ -59,6 +88,10 @@ export async function createStock(
     cost: data.cost,
     quantity: data.quantity,
     condition: data.condition || "new",
+    product_date: data.product_date || null,
+    shelf_life: data.shelf_life ?? null,
+    expire_date: data.expire_date || null,
+    supplier_name: data.supplier_name || null,
     created_at: new Date(),
   });
 
@@ -72,6 +105,12 @@ export async function createStockHistory(
     variant: string;
     quantity: number;
     cost_per_item: number;
+    paid_amount?: number | null;
+    due_amount?: number | null;
+    product_date?: string | null;
+    shelf_life?: number | null;
+    expire_date?: string | null;
+    supplier_name?: string | null;
   },
   trx?: any
 ) {
@@ -373,11 +412,11 @@ export async function getStocksCount(params: {
   where: { [key: string]: any }; // Adjust according to your filtering needs
 }): Promise<number> {
   const stock = await db("stocks")
-    .select("quantity")
+    .sum<{ total_quantity?: number | string }[]>("quantity as total_quantity")
     .where(params.where)
-    .first(); // Ensure we get only one matching record
+    .first();
 
-  return stock ? Number(stock.quantity) : 0;
+  return stock?.total_quantity ? Number(stock.total_quantity) : 0;
 }
 
 export async function getTotalStockSummary(): Promise<StockSummary> {

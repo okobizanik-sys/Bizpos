@@ -13,6 +13,7 @@ import {
   PackageX,
   UserCog,
   Settings,
+  Truck,
 } from "lucide-react";
 
 export function getMenuList(pathname: string): Group[] {
@@ -37,6 +38,13 @@ export function getMenuList(pathname: string): Group[] {
           label: "POS",
           active: pathname.includes("/pos"),
           icon: Printer,
+          submenus: [],
+        },
+        {
+          href: "/suppliers",
+          label: "Suppliers",
+          active: pathname === "/suppliers",
+          icon: Truck,
           submenus: [],
         },
         {
