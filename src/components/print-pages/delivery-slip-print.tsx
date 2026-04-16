@@ -96,7 +96,7 @@ const PrintDeliverySlip = React.forwardRef<
             className="flex justify-between border-y divide-x divide-gray-700 border-gray-700"
           >
             <div className="pl-1 py-2 w-1/3">
-              <p>Order ID:</p>
+              <p>Order ID:</p> 
               <h1 className="font-semibold">{order.order_id}</h1>
             </div>
             <div className="pl-1 py-2 w-1/3">
