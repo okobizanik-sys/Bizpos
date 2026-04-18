@@ -14,18 +14,23 @@ interface Props {
   stocks: StockPayload[];
   setSelectedStock: (value: string | null) => void;
   qtyLimit: number;
+  value?: string | null;
+  disabled?: boolean;
+  placeholder?: string;
+  emptyMessage?: string;
 }
 
 export const StockSelector: React.FC<Props> = ({
   stocks,
   setSelectedStock,
-  qtyLimit,
+  value,
+  disabled,
+  placeholder = "Enter Product ID/SKU/Name or Barcode",
+  emptyMessage = "No stock found.",
 }) => {
-  // console.log(qtyLimit, 'from stock selector');
-
   return (
     <ControlledCombobox
-      value={null}
+      value={value}
       onValueChange={setSelectedStock}
       filterItems={(inputValue, items) => {
         const q = inputValue.trim().toLowerCase();
@@ -36,25 +41,26 @@ export const StockSelector: React.FC<Props> = ({
         );
       }}
     >
-      <ComboboxInput placeholder="Enter Product ID/SKU/Name or Barcode" />
+      <ComboboxInput placeholder={placeholder} disabled={disabled} />
       <ComboboxContent>
-        {stocks.map(({ barcode, name, sku, colorName, sizeName }) => (
+        {stocks.map(({ barcode, name, sku, colorName, sizeName, productId }) => (
           <ComboboxItem
             key={barcode}
             value={barcode}
-            label={`${barcode} - ${name} - ${sku}`}
+            label={`${productId} ${barcode} ${name} ${sku} ${colorName || ""} ${sizeName || ""}`}
             className="ps-8"
           >
-            <span className="text-sm text-foreground flex gap-2">
+            <span className="text-sm text-foreground flex flex-wrap gap-2">
               <b>Barcode: {barcode}</b>
               <span>{name}</span>
             </span>
             <span className="text-xs text-muted-foreground">
-              SKU: {sku}, Variant: {colorName} - {sizeName}
+              Product ID: {productId}, SKU: {sku}, Variant: {colorName || "-"} -{" "}
+              {sizeName || "-"}
             </span>
           </ComboboxItem>
         ))}
-        <ComboboxEmpty>No results.</ComboboxEmpty>
+        <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
       </ComboboxContent>
     </ControlledCombobox>
   );

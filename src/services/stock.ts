@@ -15,6 +15,12 @@ function applyNullableWhere(query: any, column: string, value: unknown) {
   }
 }
 
+function qualifyDistinctColumns(columns?: string[]) {
+  return columns?.map((column) =>
+    column.includes(".") ? column : `stocks.${column}`
+  );
+}
+
 export async function createStock(
   data: {
     product_id: number;
@@ -288,8 +294,9 @@ export async function getStocks(params: {
     )
     .groupBy("stocks.barcode");
 
-  if (params.distinct) {
-    stocksQuery.distinct(params.distinct);
+  const distinctColumns = qualifyDistinctColumns(params.distinct);
+  if (distinctColumns) {
+    stocksQuery.distinct(distinctColumns);
   }
 
   const stocks = await stocksQuery;
@@ -324,8 +331,9 @@ export async function getStocksWithPagination(params: {
     )
     .groupBy("stocks.barcode");
 
-  if (params.distinct) {
-    stocksQuery.distinct(params.distinct);
+  const distinctColumns = qualifyDistinctColumns(params.distinct);
+  if (distinctColumns) {
+    stocksQuery.distinct(distinctColumns);
   }
 
   const stocks = await stocksQuery;
@@ -362,8 +370,9 @@ export async function getDamagedStocks(params: {
     .groupBy("stocks.barcode")
     .orderBy("created_at", "desc");
 
-  if (params.distinct) {
-    stocksQuery.distinct(params.distinct);
+  const distinctColumns = qualifyDistinctColumns(params.distinct);
+  if (distinctColumns) {
+    stocksQuery.distinct(distinctColumns);
   }
 
   const stocks = await stocksQuery;
@@ -400,8 +409,9 @@ export async function getDamagedStocksWithPagination(params: {
     .groupBy("stocks.barcode")
     .orderBy("created_at", "desc");
 
-  if (params.distinct) {
-    stocksQuery.distinct(params.distinct);
+  const distinctColumns = qualifyDistinctColumns(params.distinct);
+  if (distinctColumns) {
+    stocksQuery.distinct(distinctColumns);
   }
 
   const stocks = await stocksQuery;
