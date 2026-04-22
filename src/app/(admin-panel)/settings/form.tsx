@@ -37,7 +37,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Settings } from "@/types/shared";
 import { cn } from "@/lib/utils";
-import { getSetting, getSettings } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import {
   Sheet,
   SheetClose,
@@ -63,7 +63,11 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    getSetting().then((data) => setSettings(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSettings(data);
+      }
+    });
   }, [loading]);
 
   // console.log(settings);

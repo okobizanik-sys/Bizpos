@@ -1,15 +1,20 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { CredentialsSignin } from "next-auth";
 import { compare } from "bcryptjs";
-import db from "@/db/database";
 import { logger } from "./winston";
-import { KnexAdapter } from "authjs-knexjs-adapter";
 import { getUser } from "@/services/users";
+
+class DatabaseUnavailableError extends CredentialsSignin {
+  code = "database_unavailable";
+}
+
+class BranchAssignmentError extends CredentialsSignin {
+  code = "branch_required";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt", maxAge: 3 * 60 * 60 },
-
-  adapter: KnexAdapter(db),
 
   providers: [
     CredentialsProvider({
@@ -26,36 +31,60 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           type: "password",
           placeholder: "Enter your password",
         },
+        branchId: {
+          label: "Branch",
+          type: "text",
+          placeholder: "Select branch",
+        },
       },
 
       async authorize(credentials) {
-        // Type assertions to ensure credentials are treated as strings
-        const email = credentials.email as string;
-        const password = credentials.password;
+        try {
+          const email = String(credentials.email || "").trim();
+          const password = String(credentials.password || "");
 
-        if (!email || !password) throw new Error("Missing credentials");
+          if (!email || !password) {
+            return null;
+          }
 
-        // Query to find the user by email in the 'users' table
-        // const user = await db("users")
-        //   .select("users.*")
-        //   .where({ email: email })
-        //   .first();
-        const user = await getUser({ where: { "users.email": email } });
+          const user = await getUser({ where: { "users.email": email } });
 
-        // console.log(user, ": user from next auth");
+          if (!user?.password) {
+            return null;
+          }
 
-        if (!user || !(await compare(password as string, user.password))) {
-          throw new Error("Invalid credentials");
+          const passwordMatches = await compare(password, user.password);
+
+          if (!passwordMatches) {
+            return null;
+          }
+
+          let branchId = String(user.branchId || "");
+
+          if (user.role === "ADMIN") {
+            branchId = "";
+          } else if (!branchId) {
+            logger.warn(`Staff user ${user.id} has no branch assigned.`);
+            throw new BranchAssignmentError();
+          }
+
+          logger.info(`User logged in successfully: ${user.id}`);
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            branchId,
+          };
+        } catch (error) {
+          logger.error("Authorization failed:", error);
+
+          if (error instanceof CredentialsSignin) {
+            throw error;
+          }
+
+          throw new DatabaseUnavailableError();
         }
-
-        logger.info(`User logged in successfully: ${user.id}`); // Log successful login
-        return {
-          id: user.id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          branchId: String(user.branchId),
-        };
       },
     }),
   ],

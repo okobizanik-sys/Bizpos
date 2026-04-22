@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { fileUrlGenerator, makePrice } from "@/utils/helpers";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { BRAND_NAME } from "@/config/config";
 
 interface DamageProductSlipProps {
@@ -30,7 +30,11 @@ const DamageProductSlip = React.forwardRef<
   const [logoLoadFailed, setLogoLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
-    getSetting().then((data) => setSettingsData(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSettingsData(data);
+      }
+    });
   }, []);
   const logoSrc = settingsData?.logo_image_url
     ? fileUrlGenerator(settingsData.logo_image_url)

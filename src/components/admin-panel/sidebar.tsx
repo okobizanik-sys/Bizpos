@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "@/components/admin-panel/menu";
 import { useSidebarToggle } from "@/hooks/store/use-sidebar-toggle";
 import { SidebarToggle } from "@/components/admin-panel/sidebar-toggle";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { Settings } from "@/types/shared";
 import React from "react";
 import { fileUrlGenerator } from "@/utils/helpers";
@@ -20,7 +20,11 @@ export function Sidebar() {
   const [logoLoadFailed, setLogoLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
-    getSetting().then((data) => setSetting(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSetting(data);
+      }
+    });
   }, []);
 
   const brandName = process.env.NEXT_PUBLIC_BRAND_NAME;

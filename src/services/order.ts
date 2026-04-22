@@ -7,6 +7,44 @@ import { OrderWithItem } from "@/app/(admin-panel)/pos/item-selector";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
 import { ensureSalesSchema } from "./supplier";
 
+export async function ensureOrderItemsSchema() {
+  const [hasBarcode, hasCogs, hasColorId, hasSizeId] = await Promise.all([
+    db.schema.hasColumn("order_items", "barcode"),
+    db.schema.hasColumn("order_items", "cogs"),
+    db.schema.hasColumn("order_items", "color_id"),
+    db.schema.hasColumn("order_items", "size_id"),
+  ]);
+
+  if (!hasBarcode || !hasCogs || !hasColorId || !hasSizeId) {
+    await db.schema.alterTable("order_items", (table) => {
+      if (!hasBarcode) {
+        table.string("barcode").nullable();
+      }
+      if (!hasCogs) {
+        table.integer("cogs").nullable();
+      }
+      if (!hasColorId) {
+        table
+          .integer("color_id")
+          .unsigned()
+          .nullable()
+          .references("id")
+          .inTable("colors")
+          .onDelete("CASCADE");
+      }
+      if (!hasSizeId) {
+        table
+          .integer("size_id")
+          .unsigned()
+          .nullable()
+          .references("id")
+          .inTable("sizes")
+          .onDelete("CASCADE");
+      }
+    });
+  }
+}
+
 // Create a new order
 export async function createOrder(data: Orders) {
   const [insertResult] = await db("orders").insert(data);
@@ -71,6 +109,7 @@ export async function getOrders(
     saleChannel,
     fromDate,
     toDate,
+    branchId,
     page = 1,
     per_page = 20,
   } = filters;
@@ -86,10 +125,13 @@ export async function getOrders(
       "customers.address",
       "suppliers.name as supplierName"
     )
-    // .where("orders.branch_id", filters.branchId)
     .orderBy("date", "desc")
     .limit(per_page)
     .offset(offset);
+
+  if (branchId) {
+    query.where("orders.branch_id", branchId);
+  }
 
   if (search) {
     query.where(function () {
@@ -120,6 +162,53 @@ export async function getOrders(
   }
 
   return await query;
+}
+
+export async function getOrdersCount(
+  filters: OrderFilter & { branchId?: number }
+): Promise<number> {
+  await ensureSalesSchema();
+
+  const { search, status, saleChannel, fromDate, toDate, branchId } = filters;
+
+  const query = db("orders")
+    .leftJoin("customers", "orders.customer_id", "customers.id")
+    .countDistinct("orders.id as total");
+
+  if (branchId) {
+    query.where("orders.branch_id", branchId);
+  }
+
+  if (search) {
+    query.where(function () {
+      this.where("customers.customer", "LIKE", `%${search}%`)
+        .orWhere("customers.phone", "LIKE", `%${search}%`)
+        .orWhere("orders.order_id", "LIKE", `%${search}%`);
+    });
+  }
+
+  if (status) {
+    if (status === "ALL") {
+      query.whereIn("orders.status", ["COMPLETED", "EXCHANGED"]);
+    } else {
+      query.andWhere("orders.status", status);
+    }
+  }
+
+  if (saleChannel && saleChannel !== "ALL") {
+    query.andWhere("orders.sale_channel", saleChannel);
+  }
+
+  if (fromDate) {
+    query.andWhere("orders.date", ">=", fromDate);
+  }
+
+  if (toDate) {
+    query.andWhere("orders.date", "<=", toDate);
+  }
+
+  const [result] = await query;
+  return Number(result?.total || 0);
 }
 
 export async function getOrdersByCustomer(

@@ -15,6 +15,7 @@ interface Props {
   setSelectedStock: (value: string | null) => void;
   qtyLimit: number;
   value?: string | null;
+  clearAfterSelect?: boolean;
   disabled?: boolean;
   placeholder?: string;
   emptyMessage?: string;
@@ -24,14 +25,29 @@ export const StockSelector: React.FC<Props> = ({
   stocks,
   setSelectedStock,
   value,
+  clearAfterSelect = false,
   disabled,
   placeholder = "Enter Product ID/SKU/Name or Barcode",
   emptyMessage = "No stock found.",
 }) => {
+  const [inputValue, setInputValue] = React.useState("");
+
+  React.useEffect(() => {
+    if (!clearAfterSelect) return;
+    if (value) {
+      setInputValue("");
+    }
+  }, [clearAfterSelect, value]);
+
   return (
     <ControlledCombobox
-      value={value}
-      onValueChange={setSelectedStock}
+      value={clearAfterSelect ? null : value}
+      onValueChange={(selectedValue) => {
+        setSelectedStock(selectedValue);
+        if (clearAfterSelect && selectedValue) {
+          setInputValue("");
+        }
+      }}
       filterItems={(inputValue, items) => {
         const q = inputValue.trim().toLowerCase();
         if (!q) return items;
@@ -41,7 +57,12 @@ export const StockSelector: React.FC<Props> = ({
         );
       }}
     >
-      <ComboboxInput placeholder={placeholder} disabled={disabled} />
+      <ComboboxInput
+        placeholder={placeholder}
+        disabled={disabled}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+      />
       <ComboboxContent>
         {stocks.map(({ barcode, name, sku, colorName, sizeName, productId }) => (
           <ComboboxItem

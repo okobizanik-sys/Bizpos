@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { fileUrlGenerator } from "@/utils/helpers";
 import { BRAND_NAME } from "@/config/config";
 interface FraudCustomerSlipProps {
@@ -27,7 +27,11 @@ const FraudCustomerSlip = React.forwardRef<
   const [logoLoadFailed, setLogoLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
-    getSetting().then((data) => setSettingsData(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSettingsData(data);
+      }
+    });
   }, []);
   const logoSrc = settingsData?.logo_image_url
     ? fileUrlGenerator(settingsData.logo_image_url)

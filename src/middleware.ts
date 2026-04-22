@@ -3,6 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 export default async function middleware(request: NextRequest) {
   const { nextUrl } = request;
+  const { pathname } = nextUrl;
+
+  const publicPaths = ["/", "/unauthorized"];
+  const isAuthRoute = pathname.startsWith("/api/auth");
+  const isPublicApiRoute = pathname.startsWith("/api/settings");
+  const isOtherApiRoute = pathname.startsWith("/api/");
+
+  if (
+    publicPaths.includes(pathname) ||
+    isAuthRoute ||
+    isPublicApiRoute ||
+    isOtherApiRoute
+  ) {
+    return NextResponse.next();
+  }
+
   // console.log(nextUrl.origin)
   const token = await getToken({
     req: request,
@@ -32,12 +48,12 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Redirect unauthenticated users to login page
-  if (!isAuthenticated && nextUrl.pathname !== "/") {
+  if (!isAuthenticated) {
     return NextResponse.redirect(new URL("/", nextUrl.origin));
   }
 
   // Redirect authenticated users accessing "/dashboard" to their respective dashboards
-  if (isAuthenticated && nextUrl.pathname === "/dashboard") {
+  if (pathname === "/dashboard") {
     const dashboardRoute =
       userRole === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
     return NextResponse.redirect(new URL(dashboardRoute, nextUrl.origin));
@@ -45,7 +61,7 @@ export default async function middleware(request: NextRequest) {
 
   // Restrict admin-specific routes
   const adminRoutes = ["/admin", "/sales", "/staffs", "/settings"];
-  if (adminRoutes.some((route) => nextUrl.pathname.startsWith(route))) {
+  if (adminRoutes.some((route) => pathname.startsWith(route))) {
     if (userRole !== "ADMIN") {
       return NextResponse.redirect(new URL("/unauthorized", nextUrl.origin));
     }
@@ -58,7 +74,7 @@ export default async function middleware(request: NextRequest) {
 
   // Enforce default pagination for product inventories
   if (
-    nextUrl.pathname === "/inventories/products" &&
+    pathname === "/inventories/products" &&
     !nextUrl.searchParams.get("page")
   ) {
     return NextResponse.redirect(
@@ -69,7 +85,7 @@ export default async function middleware(request: NextRequest) {
     );
   }
   if (
-    nextUrl.pathname === "/orders/orders-list" &&
+    pathname === "/orders/orders-list" &&
     !nextUrl.searchParams.get("page")
   ) {
     return NextResponse.redirect(

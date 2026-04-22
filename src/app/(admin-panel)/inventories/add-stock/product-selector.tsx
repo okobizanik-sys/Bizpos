@@ -22,6 +22,14 @@ export const ProductSelector: React.FC<Props> = ({
   selectedProduct,
   setSelectProduct,
 }) => {
+  const [inputValue, setInputValue] = React.useState("");
+
+  React.useEffect(() => {
+    if (selectedProduct) {
+      setInputValue("");
+    }
+  }, [selectedProduct]);
+
   return (
     <ControlledCombobox
       value={selectedProduct}
@@ -41,7 +49,11 @@ export const ProductSelector: React.FC<Props> = ({
         })
       }
     >
-      <ComboboxInput placeholder="Enter Product ID/SKU/Name..." />
+      <ComboboxInput
+        placeholder="Enter Product ID/SKU/Name..."
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+      />
       <ComboboxContent>
         {products.map(({ id, name, sku }) => (
           <ComboboxItem

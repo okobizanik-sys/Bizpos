@@ -130,6 +130,46 @@ export async function createSupplier(data: Supplier) {
   return supplier;
 }
 
+export async function updateSupplier(id: number, data: Supplier) {
+  await ensureSalesSchema();
+  await ensureSupplierPurchaseSchema();
+
+  const existingSupplier = await getSupplierById(id);
+
+  if (!existingSupplier) {
+    throw new Error("Supplier not found.");
+  }
+
+  const name = String(data.name || "").trim();
+
+  if (!name) {
+    throw new Error("Supplier name is required.");
+  }
+
+  await db.transaction(async (trx) => {
+    await trx("suppliers").where({ id }).update({
+      name,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || null,
+      updated_at: new Date(),
+    });
+
+    if (existingSupplier.name !== name) {
+      await trx("stock_histories")
+        .where({ supplier_name: existingSupplier.name })
+        .update({
+          supplier_name: name,
+          updated_at: new Date(),
+        });
+    }
+  });
+
+  const [supplier] = await db("suppliers").where({ id });
+  logger.info(`Supplier updated successfully: ${supplier.id}`);
+  return supplier;
+}
+
 export async function deleteSupplier(id: number) {
   await ensureSalesSchema();
 

@@ -3,7 +3,6 @@
 import React from "react";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "@/hooks/store/use-store";
-import { getStocksByProduct, getStocksCount } from "@/services/stock";
 import { StockPayload } from "../stock-transfer/transfer-products/transfer-layout";
 import {
   Table,
@@ -28,7 +27,6 @@ import { BillDetailsForm } from "./form";
 import { usePOSStore } from "@/hooks/store/use-pos-store";
 import { useToast } from "@/components/ui/use-toast";
 import { OrderSelector } from "@/components/admin-panel/order-selector";
-import { getOrdersWithItems } from "@/services/order";
 import { OrderItems } from "@/types/shared";
 import { ExchangeDetailsForm } from "./exchange-form";
 import { useBarcodeScanner, playBeep } from "./barcode-scanner.hook";
@@ -68,6 +66,46 @@ export type OrderWithItem = {
   total?: number;
 };
 
+async function fetchPosStocks(branchId: number) {
+  const res = await fetch(`/api/pos/stocks?branch_id=${branchId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch POS stocks");
+  }
+  const data = await res.json();
+  return data.stocks as StockPayload[];
+}
+
+async function fetchPosOrders(branchId: number) {
+  const res = await fetch(`/api/pos/orders?branch_id=${branchId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch POS orders");
+  }
+  const data = await res.json();
+  return data.orders as OrderWithItem[];
+}
+
+async function fetchStockCount(branchId: number, barcode: string) {
+  const res = await fetch(
+    `/api/pos/stock-count?branch_id=${branchId}&barcode=${encodeURIComponent(
+      barcode,
+    )}`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch stock count");
+  }
+
+  const data = await res.json();
+  return data.totalQuantity as number;
+}
+
 export const POSItemSelector: React.FC = () => {
   const branch = useStore(useBranch, (state) => state.branch);
   const {
@@ -102,12 +140,13 @@ export const POSItemSelector: React.FC = () => {
   React.useEffect(() => {
     if (!branch?.id) return;
 
-    getStocksByProduct({
-      where: { branchId: Number(branch.id) },
-    }).then((data) => {
-      // @ts-ignore
-      setStocks(data);
-    });
+    fetchPosStocks(Number(branch.id))
+      .then((data) => {
+        setStocks(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load POS stocks:", error);
+      });
 
     // Reset exchange data when branch changes and lazy-load orders only when exchange opens
     setOrders(null);
@@ -127,11 +166,12 @@ export const POSItemSelector: React.FC = () => {
       return;
 
     setLoadingOrders(true);
-    getOrdersWithItems({
-      where: { "branches.id": branch.id },
-    })
+    fetchPosOrders(Number(branch.id))
       .then((data) => {
         setOrders(data || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load POS orders:", error);
       })
       .finally(() => {
         setLoadingOrders(false);
@@ -145,13 +185,26 @@ export const POSItemSelector: React.FC = () => {
   const barcodeSelected = async (code: string | null | void) => {
     // console.log("barcode selected........");
     if (code) {
+      if (!branch?.id) {
+        toast({
+          title: "Branch not selected",
+          description: "Please select a branch before adding items.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
       setSelectedBarcode(code);
-      getStocksCount({
-        where: { barcode: code, branch_id: branch?.id },
-      }).then((data) => {
-        const itemInList = itemList.find((item) => item.barcode === code);
-        setQtyLimit(itemInList ? data - itemInList.quantity : data);
-      });
+      fetchStockCount(Number(branch.id), code)
+        .then((data) => {
+          const itemInList = itemList.find((item) => item.barcode === code);
+          setQtyLimit(itemInList ? data - itemInList.quantity : data);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch stock count:", error);
+        });
+
       const stock = stocks.find((stock) => stock.barcode === code);
       if (stock) {
         addItem({
@@ -184,15 +237,27 @@ export const POSItemSelector: React.FC = () => {
   };
   const barcodeExchangeSelected = (code: string | null | void) => {
     if (code) {
+      if (!branch?.id) {
+        toast({
+          title: "Branch not selected",
+          description: "Please select a branch before exchanging items.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
       setSelectedBarcode(code);
-      getStocksCount({
-        where: { barcode: code, branch_id: branch?.id },
-      }).then((data) => {
-        const itemInList = exchangeItemList.find(
-          (item) => item.barcode === code,
-        );
-        setExgQtyLimit(itemInList ? data - itemInList.quantity : data);
-      });
+      fetchStockCount(Number(branch.id), code)
+        .then((data) => {
+          const itemInList = exchangeItemList.find(
+            (item) => item.barcode === code,
+          );
+          setExgQtyLimit(itemInList ? data - itemInList.quantity : data);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch exchange stock count:", error);
+        });
       // setExgQtyModalOpen(true);
 
       const stock = stocks.find((stock) => stock.barcode === code);
@@ -283,6 +348,7 @@ export const POSItemSelector: React.FC = () => {
                     stocks={stocks}
                     setSelectedStock={barcodeSelected}
                     qtyLimit={qtyLimit}
+                    clearAfterSelect
                   />
                   <QrCode className="opacity-60 absolute right-8 -translate-y-8" />
                 </div>
@@ -372,6 +438,7 @@ export const POSItemSelector: React.FC = () => {
                     stocks={stocks}
                     setSelectedStock={barcodeExchangeSelected}
                     qtyLimit={exgQtyLimit}
+                    clearAfterSelect
                   />
                   <QrCode className="opacity-60 absolute right-8 -translate-y-8" />
                 </div>

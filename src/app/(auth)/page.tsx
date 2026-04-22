@@ -22,7 +22,7 @@ import { useStore } from "@/hooks/store/use-store";
 import { useBranch } from "@/hooks/store/use-branch";
 import Image from "next/image";
 import { Settings } from "@/types/shared";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -34,7 +34,11 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    getSetting().then((data) => setSetting(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSetting(data);
+      }
+    });
   }, []);
 
   const formSchema = z.object({
@@ -54,11 +58,10 @@ export default function LoginPage() {
   if (!branchStore) return null;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const data = makeFormData(values);
     setLoading(true);
     try {
-      const loggedIn = await loginUser(data);
       branchStore.clearBranch();
+      const loggedIn = await loginUser(makeFormData(values));
       if (loggedIn) {
         toast({
           title: "Logged in Successfully!",
@@ -112,7 +115,6 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      {/* <Input type="password" placeholder="******" {...field} /> */}
                       <div className="relative">
                         <Input
                           type={showPassword ? "text" : "password"}

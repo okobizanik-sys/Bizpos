@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,7 @@ export const FilterOrderForm: React.FC<FilterOrderFormProps> = ({
   currentFilters,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const form = useForm({
     defaultValues: {
       ...defaultValues,
@@ -47,16 +48,33 @@ export const FilterOrderForm: React.FC<FilterOrderFormProps> = ({
   });
 
   const handleSubmit = (data: any) => {
-    const query = new URLSearchParams();
+    const query = new URLSearchParams(searchParams?.toString());
 
     if (data.search) query.set("search", data.search);
+    else query.delete("search");
+
     if (data.status) query.set("status", data.status);
+    else query.delete("status");
+
     if (data.saleChannel && data.saleChannel !== "ALL") {
       query.set("saleChannel", data.saleChannel);
+    } else {
+      query.delete("saleChannel");
     }
-    if (data.fromDate)
+
+    if (data.fromDate) {
       query.set("fromDate", new Date(data.fromDate).toISOString());
-    if (data.toDate) query.set("toDate", new Date(data.toDate).toISOString());
+    } else {
+      query.delete("fromDate");
+    }
+
+    if (data.toDate) {
+      query.set("toDate", new Date(data.toDate).toISOString());
+    } else {
+      query.delete("toDate");
+    }
+
+    query.set("page", "1");
 
     router.push(`?${query.toString()}`);
   };

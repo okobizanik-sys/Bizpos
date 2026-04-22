@@ -16,6 +16,7 @@ import {
 import { getSupplierPurchases } from "@/services/supplier";
 import { makeBDPrice } from "@/utils/helpers";
 import SupplierPayDueDialog from "./pay-due-dialog";
+import SupplierProfileForm from "./supplier-profile-form";
 
 interface Props {
   params: {
@@ -93,26 +94,7 @@ export default async function SupplierProfilePage({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="p-4 lg:col-span-1">
-            <h3 className="text-lg font-semibold">Supplier Info</h3>
-            <div className="mt-4 space-y-2 text-sm">
-              <p>
-                <span className="font-medium">Name:</span> {supplier.name}
-              </p>
-              <p>
-                <span className="font-medium">Email:</span>{" "}
-                {supplier.email || "No email"}
-              </p>
-              <p>
-                <span className="font-medium">Mobile:</span>{" "}
-                {supplier.phone || "No mobile"}
-              </p>
-              <p>
-                <span className="font-medium">Address:</span>{" "}
-                {supplier.address || "No address"}
-              </p>
-            </div>
-          </Card>
+          <SupplierProfileForm supplier={supplier} />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 xl:grid-cols-4">
             <Card className="p-4">

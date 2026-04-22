@@ -35,6 +35,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Branches, ChallanItems, Challans } from "@/types/shared";
 import { createChallanItem } from "@/services/challan";
 import { usePOSStore } from "@/hooks/store/use-pos-store";
+import { useStore } from "@/hooks/store/use-store";
+import { useBranch } from "@/hooks/store/use-branch";
 import { Card } from "@/components/ui/card";
 import { PackageSearch, SquareMenu, Trash2 } from "lucide-react";
 
@@ -70,6 +72,7 @@ interface Props {
 export const TransferLayout: React.FC<Props> = ({ branches }) => {
   const { toast } = useToast();
   const { setChallanNo } = usePOSStore();
+  const currentBranch = useStore(useBranch, (state) => state.branch);
 
   const [fromBranchId, setFromBranchId] = React.useState<number | null>(null);
   const [toBranchId, setToBranchId] = React.useState<number | null>(null);
@@ -84,6 +87,14 @@ export const TransferLayout: React.FC<Props> = ({ branches }) => {
     []
   );
   const [loading, setLoading] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!currentBranch?.id) return;
+
+    setFromBranchId((prev) =>
+      prev === currentBranch.id ? prev : Number(currentBranch.id)
+    );
+  }, [currentBranch?.id]);
 
   React.useEffect(() => {
     if (!fromBranchId) {
@@ -344,6 +355,11 @@ export const TransferLayout: React.FC<Props> = ({ branches }) => {
                 ))}
               </SelectContent>
             </Select>
+            {currentBranch?.id ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Current selected branch: {currentBranch.name}
+              </p>
+            ) : null}
           </div>
 
           <div className="lg:col-span-3">

@@ -10,11 +10,13 @@ interface Props {
 
 export default async function PrintLabelPage({ params }: Props) {
   const productId = Number(params.id);
-// const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
+
   if (isNaN(productId)) {
     notFound();
   }
-const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
+
+  const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
+
   const product = await db("products")
     .select("id", "name", "selling_price")
     .where({ id: productId })
@@ -24,7 +26,6 @@ const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
     notFound();
   }
 
-  // Fetch stocks.barcode — the real barcode used in POS and orders
   const stocks = await db("stocks")
     .where({ product_id: productId, condition: "new" })
     .leftJoin("colors", "stocks.color_id", "colors.id")
@@ -40,8 +41,8 @@ const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
     return (
       <div className="p-6">
         <p className="text-destructive font-medium">
-          No stock found for this product. Add stock first — the barcode is
-          assigned when stock is created.
+          No stock found for this product. Add stock first, then print the
+          label.
         </p>
       </div>
     );

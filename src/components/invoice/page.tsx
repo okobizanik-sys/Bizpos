@@ -5,7 +5,7 @@ import React from "react";
 import { Branches, Orders, SalesData, Settings } from "@/types/shared";
 import { formatDate } from "date-fns";
 import { TotalsOfOrder } from "@/app/(admin-panel)/orders/orders-list/dropdown";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { fileUrlGenerator } from "@/utils/helpers";
 import { BRAND_NAME } from "@/config/config";
 import Barcode from "react-barcode";
@@ -28,7 +28,11 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
 
     // Fetch settings once on mount
     React.useEffect(() => {
-      getSetting().then((data) => setSettingsData(data));
+      fetchSetting().then((data) => {
+        if (data) {
+          setSettingsData(data);
+        }
+      });
     }, []);
 
     // Build absolute URL for logo so it works inside print iframes

@@ -281,6 +281,10 @@ export async function updateBillDetails(
   customerData?: CustomerData,
 ) {
   try {
+    if (!branch?.id) {
+      throw new Error("Branch is required for exchange checkout.");
+    }
+
     await db.transaction(async (trx) => {
       const customersData = {
         customer: formData.get("name") as string,

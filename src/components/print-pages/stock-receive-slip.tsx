@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { fileUrlGenerator, makePrice, makeProductCode } from "@/utils/helpers";
-import { getSetting } from "@/services/settings";
+import { fetchSetting } from "@/services/settings-client";
 import { BRAND_NAME } from "@/config/config";
 
 interface StockReceiveSlipProps {
@@ -28,7 +28,11 @@ const StockReceiveSlip = React.forwardRef<
   const [logoLoadFailed, setLogoLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
-    getSetting().then((data) => setSettingsData(data));
+    fetchSetting().then((data) => {
+      if (data) {
+        setSettingsData(data);
+      }
+    });
   }, []);
   const logoSrc = settingsData?.logo_image_url
     ? fileUrlGenerator(settingsData.logo_image_url)

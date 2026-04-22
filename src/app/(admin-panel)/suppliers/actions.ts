@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createSupplier, deleteSupplier } from "@/services/supplier";
+import { createSupplier, deleteSupplier, updateSupplier } from "@/services/supplier";
 
 export async function createSupplierAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
@@ -32,4 +32,25 @@ export async function deleteSupplierAction(id: number) {
   revalidatePath("/pos");
 
   return { success: true };
+}
+
+export async function updateSupplierAction(id: number, formData: FormData) {
+  const name = String(formData.get("name") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const address = String(formData.get("address") || "").trim();
+
+  if (!name) {
+    throw new Error("Supplier name is required.");
+  }
+
+  const supplier = await updateSupplier(id, { name, email, phone, address });
+
+  revalidatePath("/suppliers");
+  revalidatePath(`/suppliers/${id}`);
+  revalidatePath("/sales/sales-list");
+  revalidatePath("/orders/orders-list");
+  revalidatePath("/pos");
+
+  return supplier;
 }

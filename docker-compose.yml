@@ -3,16 +3,24 @@ version: '3.7'
 services:
 
   bizpos-db:
-    image: mysql
+    image: mysql:8.0
     container_name: bizpos-db-mysql
-    restart: on-failure
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    # volumes:
-      # - /var/lib/mysql/data
+      TZ: Asia/Dhaka
+    volumes:
+      - bizpos-db-data:/var/lib/mysql
     ports:
       - ${DB_PORT}:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     command: --sql-mode="STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+
+volumes:
+  bizpos-db-data:

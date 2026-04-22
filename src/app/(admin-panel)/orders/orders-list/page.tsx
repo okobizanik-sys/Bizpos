@@ -1,9 +1,7 @@
 import React from "react";
 import { OrdersTable } from "./table";
 import { FilterOrderForm } from "./filter";
-import { getOrders } from "@/services/order";
-import { ContentLayout } from "@/components/admin-panel/content-layout";
-import db from "@/db/database";
+import { getOrders, getOrdersCount } from "@/services/order";
 import { Navbar } from "@/components/admin-panel/navbar";
 
 export const revalidate = 0;
@@ -51,12 +49,15 @@ export default async function OrderPage({ searchParams }: Props) {
 
   const fetchedOrders = await getOrders({
     ...filter,
+    branchId: branchId || undefined,
     page,
     per_page,
   });
 
-  const [result] = await db("orders").count("* as total");
-  const totals = Number(result.total);
+  const totals = await getOrdersCount({
+    ...filter,
+    branchId: branchId || undefined,
+  });
   const pageCount = Math.ceil(totals / per_page);
 
   return (

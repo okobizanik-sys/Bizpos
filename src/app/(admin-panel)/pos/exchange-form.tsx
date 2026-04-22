@@ -157,6 +157,15 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
   );
 
   const onSubmit = async (values: z.infer<typeof billFormSchema>) => {
+    if (!branch?.id) {
+      toast({
+        title: "Branch not selected",
+        description: "Please select a branch before proceeding to checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     const formData = makeFormData(values);
 
@@ -189,11 +198,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
       });
     } finally {
       setLoading(false);
-      resetExchangeItemList();
-      resetAddExchangeItemList();
-      resetReturnItemList();
-      form.reset();
-      setCustomerDetails("", "", "");
     }
   };
 

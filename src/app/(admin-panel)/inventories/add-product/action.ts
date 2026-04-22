@@ -56,6 +56,8 @@ export async function createProductFormAction(formData: FormData) {
       const [insertProductResult] = await trx("products").insert({
         name: data.name,
         sku: data.sku,
+        barcode: null,
+        barcode_serial_id: null,
         selling_price: data.sellingPrice,
         description: data.description,
         category_id: data.categoryId,
@@ -101,10 +103,12 @@ export async function createProductFormAction(formData: FormData) {
     return {
       success: true,
       message: "product creation successful",
-      barcode: createdProduct?.barcode,
     };
   } catch (error) {
     logger.error("Error creating product:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to create product");
   }
 }

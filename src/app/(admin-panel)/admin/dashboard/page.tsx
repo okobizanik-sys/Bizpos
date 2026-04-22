@@ -4,7 +4,7 @@ import { DashboardFilterType, getDashboardSummary } from "@/services/sales";
 import { getBranches } from "@/services/branch";
 import AdminDashboard from "./dashboard";
 import { getUsers } from "@/services/users";
-import { getTotalStockSummary } from "@/services/stock";
+import { getInventoryAlertSummary, getTotalStockSummary } from "@/services/stock";
 import { unstable_noStore as noStore } from "next/cache";
 
 export const revalidate = 0;
@@ -30,15 +30,16 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     typeof selectedFilterParam === "string" &&
     FILTER_TYPES.includes(selectedFilterParam as DashboardFilterType)
       ? (selectedFilterParam as DashboardFilterType)
-      : "lifetime";
+      : "today";
 
-  const [customers, summary, users, branches, stockCounts] =
+  const [customers, summary, users, branches, stockCounts, inventoryAlerts] =
     await Promise.all([
       getUniqueCustomers({ where: {} }),
       getDashboardSummary(selectedFilter),
       getUsers({ where: {} }),
       getBranches(),
       getTotalStockSummary(),
+      getInventoryAlertSummary(),
     ]);
 
   // console.log(salesSummary, "sales summary from dashboard");
@@ -52,6 +53,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         customers={customers}
         users={users}
         stockSummary={stockCounts}
+        inventoryAlerts={inventoryAlerts}
         selectedFilter={selectedFilter}
       />
     </>

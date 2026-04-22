@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BarcodeLabel } from "@/components/BarcodeLabel";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ interface PrintLabelClientProps {
   productId: number;
   productName: string;
   sellingPrice: number;
-  /** All stock variants for this product — each has the real stocks.barcode */
   stocks: Array<{ barcode: string; colorName: string; sizeName: string }>;
   mrp?: number;
   logoUrl?: string;
@@ -72,10 +71,14 @@ export default function PrintLabelClient({
 }: PrintLabelClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [presetKey, setPresetKey] = useState<PresetKey>("58mm");
-  // Default to the first stock variant's barcode
+  const resolvedBarcode = stocks[0]?.barcode || "";
   const [selectedBarcode, setSelectedBarcode] = useState<string>(
-    stocks[0]?.barcode ?? "",
+    resolvedBarcode,
   );
+
+  useEffect(() => {
+    setSelectedBarcode(resolvedBarcode);
+  }, [resolvedBarcode]);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -163,7 +166,6 @@ export default function PrintLabelClient({
       </div>
 
       <div className="grid gap-5">
-        {/* Variant selector — only shown when product has multiple stock barcodes */}
         {stocks.length > 1 && (
           <div>
             <p className="text-sm font-medium mb-2">Variant / Barcode</p>
@@ -221,8 +223,8 @@ export default function PrintLabelClient({
           </div>
           <p className="text-xs text-muted-foreground mt-2">
             {isRoll
-              ? `Continuous roll — labels feed one after another. Width: ${preset.pageWidth}.`
-              : `Sheet — labels tile in a ${preset.cols}-column grid across A4 pages.`}
+              ? `Continuous roll - labels feed one after another. Width: ${preset.pageWidth}.`
+              : `Sheet - labels tile in a ${preset.cols}-column grid across A4 pages.`}
           </p>
         </div>
 
@@ -271,32 +273,6 @@ export default function PrintLabelClient({
               barcodeString={selectedBarcode}
             />
           </div>
-        </div>
-
-        <div className="rounded-md border bg-muted/40 px-4 py-3 text-xs text-muted-foreground space-y-1">
-          <p className="font-semibold text-foreground">
-            How to print on your thermal printer:
-          </p>
-          <p>
-            1. Connect your thermal printer and make sure it is set as the
-            default printer in Windows.
-          </p>
-          <p>2. Click Print above - Chrome will open the print dialog.</p>
-          <p>
-            3. Under Destination, select your thermal printer (not Save as PDF).
-          </p>
-          <p>
-            4. Under More settings, Paper size - pick the size matching your
-            roll ({preset.pageWidth}).
-          </p>
-          <p>5. Set Margins to None and uncheck Headers and footers.</p>
-          <p>6. Click Print - labels will feed continuously on the roll.</p>
-          {isRoll && (
-            <p className="text-amber-600 font-medium pt-1">
-              If your thermal printer is not listed, install its driver from the
-              manufacturer website first (e.g. Xprinter, EPSON, Star).
-            </p>
-          )}
         </div>
       </div>
 

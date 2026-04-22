@@ -88,6 +88,7 @@ export const StockAddContainer: React.FC = () => {
       }).then((product) => {
         // @ts-ignore
         setProduct(product);
+        setStockRow(initalStockRow);
       });
 
       getProductColors(Number(selectedProduct)).then((color) => {
@@ -102,11 +103,31 @@ export const StockAddContainer: React.FC = () => {
 
   const handleBarcodeSumbit = (e: FormEvent) => {
     e.preventDefault();
+
+    if (!stockRow.barcode.trim()) {
+      toast({
+        title: "Barcode required",
+        description: "Please enter or scan a barcode before adding stock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setShowDialog(true);
   };
 
   const handleStockRowSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!stockRow.barcode.trim()) {
+      toast({
+        title: "Barcode required",
+        description: "Barcode is required when adding stock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setStocks([...stocks, stockRow]);
     setStockRow(initalStockRow);
     setShowDialog(false);
@@ -326,7 +347,13 @@ export const StockAddContainer: React.FC = () => {
           >
             <div className="flex flex-col gap-2 w-48">
               <Label>Barcode</Label>
-              <Input disabled value={stockRow.barcode} />
+              <Input
+                required
+                value={stockRow.barcode}
+                onChange={(e) =>
+                  setStockRow({ ...stockRow, barcode: e.target.value })
+                }
+              />
             </div>
             <div className="flex flex-col gap-2 w-36">
               <Label>Color</Label>

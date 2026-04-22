@@ -379,6 +379,48 @@ export async function getDamagedStocks(params: {
   return stocks;
 }
 
+export async function getExpiredStocks(params: {
+  where?: { [key: string]: any };
+  distinct?: string[];
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const stocksQuery = db("stocks")
+    .where({ ...(params.where || {}), condition: "new" })
+    .whereNotNull("stocks.expire_date")
+    .andWhere("stocks.expire_date", "<", today)
+    .leftJoin("products", "stocks.product_id", "products.id")
+    .leftJoin("colors", "stocks.color_id", "colors.id")
+    .leftJoin("sizes", "stocks.size_id", "sizes.id")
+    .leftJoin("branches", "stocks.branch_id", "branches.id")
+    .leftJoin("categories", "products.category_id", "categories.id")
+    .select(
+      "stocks.*",
+      "products.id as productId",
+      "products.name",
+      "products.sku",
+      "products.selling_price",
+      "products.description",
+      "colors.id as colorId",
+      "colors.name as colorName",
+      "sizes.id as sizeId",
+      "sizes.name as sizeName",
+      "branches.name as branchName",
+      "branches.id as branchId",
+      "categories.name as categoryName"
+    )
+    .groupBy("stocks.barcode")
+    .orderBy("stocks.expire_date", "asc");
+
+  const distinctColumns = qualifyDistinctColumns(params.distinct);
+  if (distinctColumns) {
+    stocksQuery.distinct(distinctColumns);
+  }
+
+  const stocks = await stocksQuery;
+  return stocks;
+}
+
 export async function getDamagedStocksWithPagination(params: {
   where: { [key: string]: any };
   distinct?: string[];
@@ -446,6 +488,50 @@ export async function getTotalStockSummary(): Promise<StockSummary> {
     totalQuantity: result?.total_quantity || 0,
     totalStockValue: Math.round(result?.total_stock_value) || 0,
     totalSellValue: Math.round(result?.total_sell_value) || 0,
+  };
+}
+
+export type InventoryAlertSummary = {
+  damagedQuantity: number;
+  damagedValue: number;
+  returnQuantity: number;
+  expiredQuantity: number;
+  expiredValue: number;
+};
+
+export async function getInventoryAlertSummary(): Promise<InventoryAlertSummary> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [damagedRow, returnedRow, expiredRow] = await Promise.all([
+    db("stocks")
+      .select(
+        db.raw("COALESCE(SUM(stocks.quantity), 0) as damaged_quantity"),
+        db.raw("COALESCE(SUM(stocks.quantity * stocks.cost), 0) as damaged_value")
+      )
+      .where({ condition: "damaged" })
+      .first(),
+    db("orders")
+      .leftJoin("order_items", "orders.id", "order_items.order_id")
+      .select(db.raw("COALESCE(SUM(order_items.quantity), 0) as return_quantity"))
+      .where("orders.status", "RETURN")
+      .first(),
+    db("stocks")
+      .select(
+        db.raw("COALESCE(SUM(stocks.quantity), 0) as expired_quantity"),
+        db.raw("COALESCE(SUM(stocks.quantity * stocks.cost), 0) as expired_value")
+      )
+      .where("stocks.condition", "new")
+      .whereNotNull("stocks.expire_date")
+      .where("stocks.expire_date", "<", today)
+      .first(),
+  ]);
+
+  return {
+    damagedQuantity: Number(damagedRow?.damaged_quantity || 0),
+    damagedValue: Math.round(Number(damagedRow?.damaged_value || 0)),
+    returnQuantity: Number(returnedRow?.return_quantity || 0),
+    expiredQuantity: Number(expiredRow?.expired_quantity || 0),
+    expiredValue: Math.round(Number(expiredRow?.expired_value || 0)),
   };
 }
 

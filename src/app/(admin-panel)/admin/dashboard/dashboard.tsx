@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import ReportPage from "@/components/report-page/report-page";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,11 @@ import { Branches, Customers, User } from "@/types/shared";
 import { Label } from "@radix-ui/react-label";
 import {
   Boxes,
+  CalendarX2,
   ClipboardCheck,
   Download,
+  PackageX,
+  RotateCcw,
   ScrollText,
   ShoppingBag,
   Users,
@@ -26,6 +28,7 @@ import { useReactToPrint } from "react-to-print";
 import { StockSummary } from "../../inventories/stock-list/page";
 import { makeBDPrice } from "@/utils/helpers";
 import { DashboardSummary } from "@/services/sales";
+import { InventoryAlertSummary } from "@/services/stock";
 
 interface SalesDashboardProps {
   summary: DashboardSummary;
@@ -33,6 +36,7 @@ interface SalesDashboardProps {
   customers: Customers[];
   users: User[];
   stockSummary: StockSummary;
+  inventoryAlerts: InventoryAlertSummary;
   selectedFilter: "today" | "week" | "month" | "lifetime";
 }
 
@@ -46,7 +50,7 @@ const menuList = [
 type FilterType = (typeof menuList)[number]["type"];
 
 const getFilterHref = (filterType: FilterType) =>
-  filterType === "lifetime"
+  filterType === "today"
     ? "/admin/dashboard"
     : `/admin/dashboard?show=${filterType}`;
 
@@ -56,12 +60,13 @@ export default function AdminDashboard({
   customers,
   users,
   stockSummary,
+  inventoryAlerts,
   selectedFilter,
 }: SalesDashboardProps) {
   const activeFilter = selectedFilter;
   const show = React.useMemo(
     () =>
-      menuList.find((item) => item.type === activeFilter)?.title ?? "Lifetime",
+      menuList.find((item) => item.type === activeFilter)?.title ?? "Today",
     [activeFilter],
   );
 
@@ -73,6 +78,13 @@ export default function AdminDashboard({
     totalPaidAmount,
     branchWiseTotals,
   } = summary;
+  const {
+    damagedQuantity,
+    damagedValue,
+    returnQuantity,
+    expiredQuantity,
+    expiredValue,
+  } = inventoryAlerts;
 
   const printerRef = React.useRef(null);
   const handlePrinter = useReactToPrint({
@@ -103,7 +115,7 @@ export default function AdminDashboard({
       </div>
 
       <div className="m-4 mt-1 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="bg-gradient-to-tr from-[#654EDA] via-[#7B61FF] to-[#654EDA] flex items-end justify-between">
+        <Card className="bg-[#b074ff] transition-colors hover:bg-[#a668f8] flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-white rounded-sm h-8 w-8 flex justify-center items-center">
               <ScrollText size={20} />
@@ -120,7 +132,7 @@ export default function AdminDashboard({
           <CardHeader className="text-white">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between">
+        <Card className="flex items-end justify-between bg-[#ffc6c6] transition-colors hover:bg-[#ffb8b8]">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -133,7 +145,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between">
+        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5]">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -148,7 +160,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between">
+        <Card className="flex items-end justify-between bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -160,8 +172,9 @@ export default function AdminDashboard({
           </div>
           <CardHeader className="">{show}</CardHeader>
         </Card>
+        
 
-        <Card className="flex items-end justify-between">
+        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5]">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -174,7 +187,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6">
+        <Card className="flex items-center justify-start pl-6 bg-[#c091fd] transition-colors hover:bg-[#b680fd]">
           <div className="bg-[#FFDCF7] rounded-sm h-8 w-8 flex justify-center items-center">
             <Boxes size={20} color="#FF1BCD" />
           </div>
@@ -186,7 +199,49 @@ export default function AdminDashboard({
           </CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between">
+          <Card className="bg-[#ffc6c6] transition-colors hover:bg-[#ffb8b8]">
+            <Link
+              href="/damage-products/list"
+              className="flex items-center justify-start pl-6"
+            >
+              <div className="bg-[#FFE1E1] rounded-sm h-8 w-8 flex justify-center items-center">
+                <PackageX size={20} color="#E11D48" />
+              </div>
+              <CardHeader>
+                <CardDescription>Damaged Products</CardDescription>
+                <CardTitle>{damagedQuantity} pcs</CardTitle>
+                <CardDescription>{makeBDPrice(damagedValue)}</CardDescription>
+              </CardHeader>
+            </Link>
+          </Card>
+          <Card className="bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
+            <Link
+              href="/inventories/expired-products"
+              className="flex items-center justify-start pl-6"
+            >
+              <div className="bg-[#FFF4D6] rounded-sm h-8 w-8 flex justify-center items-center">
+                <CalendarX2 size={20} color="#D97706" />
+              </div>
+              <CardHeader>
+                <CardDescription>Expired Products</CardDescription>
+                <CardTitle>{expiredQuantity} pcs</CardTitle>
+                <CardDescription>{makeBDPrice(expiredValue)}</CardDescription>
+              </CardHeader>
+            </Link>
+          </Card>
+        <Card className="flex items-center justify-start pl-6 bg-[#ffc6c6]">
+          <div className="bg-[#E7F0FF] rounded-sm h-8 w-8 flex justify-center items-center">
+            <RotateCcw size={20} color="#2563EB" />
+          </div>
+          <CardHeader>
+            <CardDescription>Returned Products</CardDescription>
+            <CardTitle>{returnQuantity} pcs</CardTitle>
+          </CardHeader>
+        </Card>
+
+        
+
+        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5] ">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#DDFFE2] rounded-sm h-8 w-8 flex justify-center items-center">
               <ShoppingBag size={20} color="#29CC6A" />
@@ -199,7 +254,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6">
+        <Card className="flex items-center justify-start pl-6 bg-[#c091fd] transition-colors hover:bg-[#b680fd]">
           <div className="bg-blue-200 rounded-sm h-8 w-8 flex justify-center items-center">
             <Users size={20} color="blue" />
           </div>
@@ -209,7 +264,7 @@ export default function AdminDashboard({
           </CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6">
+        <Card className="flex items-center justify-start pl-6 bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
           <div className="bg-[#EDEAFF] rounded-sm h-8 w-8 flex justify-center items-center">
             <UsersRound size={20} color="#7B61FF" />
           </div>
