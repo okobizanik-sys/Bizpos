@@ -1,5 +1,4 @@
 "use server"
-
 import { AuthError } from "next-auth";
 import { signIn } from "@/lib/next-auth";
 import { logger } from "@/lib/winston";

@@ -14,6 +14,7 @@ import {
   UserCog,
   Settings,
   Truck,
+  Landmark,
 } from "lucide-react";
 
 export function getMenuList(pathname: string): Group[] {
@@ -81,6 +82,25 @@ export function getMenuList(pathname: string): Group[] {
               label: "Discounted Sales",
               active: pathname === "/sales/discounted-sales",
             },
+          ],
+        },
+        {
+          href: "",
+          label: "Accounts",
+          active: pathname.includes("/accounts"),
+          icon: Landmark,
+          submenus: [
+            {
+              href: "/accounts/accounts-list",
+              label: "Accounts List",
+              active: pathname === "/accounts/accounts-list",
+            },
+            {
+              href: "/accounts/add-account",
+              label: "Add Account",
+              active: pathname === "/accounts/add-account",
+            },
+            
           ],
         },
         {
