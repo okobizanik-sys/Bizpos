@@ -25,15 +25,7 @@ const nextConfig = {
   env: {
     DATABASE_URL: process.env.DATABASE_URL,
   },
-  // webpack: (config, { isServer }) => {
-  //   if (!isServer) {
-  //     config.resolve.fallback = {
-  //       ...config.resolve.fallback,
-  //       oracledb: false,
-  //     };
-  //   }
-  //   return config;
-  // },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
