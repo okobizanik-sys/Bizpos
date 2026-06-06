@@ -32,9 +32,7 @@ import { Settings } from "@/types/shared";
 import { dropZoneConfig, settingsFormSchema } from "./form-schema";
 import { deleteSettingOnConfirmed, updateSettingFormAction } from "./actions";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
 
 interface Props {
   setting: Settings;
@@ -59,8 +57,6 @@ export function SettingDetailSheet({ setting }: Props) {
       vat_rate: String(setting?.vat_rate),
       logo_image: [],
       login_image: [],
-      // logo_image: setting?.logo_image_url ? [setting?.logo_image_url] : [],
-      // login_image: setting?.login_image_url ? [setting?.login_image_url] : [],
     },
   });
 
@@ -83,11 +79,8 @@ export function SettingDetailSheet({ setting }: Props) {
   }, [form.watch("login_image")]);
 
   const onSubmit = async (values: z.infer<typeof settingsFormSchema>) => {
-    // console.log("Form submitted:", values);
     setUpdating(true);
     const formData = makeFormData(values);
-    // console.log(values, "values from update form");
-    // console.log(formData, "formData from update form");
     try {
       await updateSettingFormAction(Number(setting.id), formData);
       toast({
@@ -107,14 +100,6 @@ export function SettingDetailSheet({ setting }: Props) {
       window.location.reload();
     }
   };
-
-  // const testValues = {
-  //   return_privacy_policy: "Test policy",
-  //   vat_rate: "5",
-  //   logo_image: [],
-  //   login_image: [],
-  // };
-  // onSubmit(testValues);
 
   const handleDeleteClick = async () => {
     if (await confirmation("Are you sure you want to delete this setting?")) {
@@ -265,15 +250,7 @@ export function SettingDetailSheet({ setting }: Props) {
                   <FormItem className="col-span-3">
                     <FormLabel>Return Policy</FormLabel>
                     <FormControl>
-                      {/* <Textarea
-                        placeholder="Enter settings return & exchange policy"
-                        {...field}
-                      /> */}
                       <ReactQuill {...field} />
-                      {/* <Input
-                        placeholder="Enter settings return & exchange policy"
-                        {...field}
-                      /> */}
                     </FormControl>
                     <FormDescription className="text-red-400 text-xs min-h-4">
                       {form.formState.errors.return_privacy_policy?.message}
@@ -318,3 +295,4 @@ export function SettingDetailSheet({ setting }: Props) {
     </Sheet>
   );
 }
+
