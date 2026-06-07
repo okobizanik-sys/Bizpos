@@ -1,70 +1,7 @@
-// "use client";
 
-// import {
-//   ComboboxContent,
-//   ComboboxEmpty,
-//   ComboboxInput,
-//   ComboboxItem,
-//   ControlledCombobox,
-// } from "@/components/ui/controlled-combo-box";
-// import { Customers } from "@/types/shared";
-// import React from "react";
 
-// interface Props {
-//   customers: Customers[];
-//   setSelectedCustomer: (value: string | null) => void;
-// }
 
-// export const PhoneSelector: React.FC<Props> = ({
-//   customers,
-//   setSelectedCustomer,
-// }) => {
-//   // console.log(, 'from customer selector');
 
-//   return (
-//     <ControlledCombobox
-//       value={null}
-//       onValueChange={setSelectedCustomer}
-//       filterItems={(inputValue, items) =>
-//         items.filter(({ value }) => {
-//           const customer = customers.find(
-//             (customer) => String(customer.id) === value
-//           );
-//           return (
-//             !inputValue ||
-//             (customer &&
-//               customer.phone.toLowerCase().includes(inputValue.toLowerCase()))
-//           );
-//         })
-//       }
-//     >
-//       <ComboboxInput
-//         placeholder="Enter Customer Phone"
-//         type="text"
-//         name="phone"
-//       />
-//       <ComboboxContent>
-//         {customers.map(({ id, customer, phone, address }) => (
-//           <ComboboxItem
-//             key={id}
-//             value={String(id)}
-//             label={`${id}-${phone}`}
-//             className="p-1"
-//           >
-//             <span className="text-sm text-foreground">
-//               <b>Phone: {phone}</b>
-//               <p>{customer}</p>
-//             </span>
-//             <span className="text-xs text-muted-foreground">
-//               ID: {id}, Address: {address}
-//             </span>
-//           </ComboboxItem>
-//         ))}
-//         <ComboboxEmpty>No results.</ComboboxEmpty>
-//       </ComboboxContent>
-//     </ControlledCombobox>
-//   );
-// };
 
 "use client";
 
@@ -142,26 +79,10 @@ export const PhoneSelector: React.FC<PhoneSelectorProps> = ({
           );
         })
       }
-      //   filterItems={(inputValue, items) => {
-      //     // If input is empty, return all items
-      //     if (!inputValue) return items;
 
-      //     // Filter items based on input
-      //     return items.filter(({ value }) => {
-      //       const customer = customers.find(
-      //         (customer) => String(customer.id) === value
-      //       );
 
-      //       if (!customer) return false;
 
-      //       // Check if input matches phone or customer name
-      //       const phoneMatch = customer.phone
-      //         .replace(/\D/g, "")
-      //         .includes(inputValue.replace(/\D/g, ""));
 
-      //       return phoneMatch;
-      //     });
-      //   }}
     >
       <ComboboxInput
         placeholder="Enter Customer Phone"

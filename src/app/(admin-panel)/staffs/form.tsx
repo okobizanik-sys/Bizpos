@@ -77,7 +77,6 @@ export const StaffForm: React.FC<Props> = ({ branches }) => {
         form.reset();
       }
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create product",
         description: error.message,

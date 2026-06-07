@@ -11,7 +11,6 @@ export async function getProductSizes(productId: number) {
     .leftJoin("products", "products_sizes.product_id", "products.id")
     .leftJoin("sizes", "products_sizes.size_id", "sizes.id")
     .select("products_sizes.*", "sizes.id", "sizes.name")
-    // .groupBy("products_sizes.product_id", "products_sizes.size_id")
     .where({ product_id: productId });
   return sizes;
 }

@@ -3,7 +3,6 @@ import { z } from "zod";
 export const billFormSchema = z.object({
   phone: z
     .string()
-    // .length(11, {message: "Phone number must be 11 digits!"})
     .refine(
       (v) => {
         let n = Number(v);

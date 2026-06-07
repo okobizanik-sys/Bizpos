@@ -13,8 +13,6 @@ export const columns: ColumnDef<ChallanGetPayload>[] = [
   {
     header: "Challan No",
     accessorKey: "challan_no",
-    // accessorFn: (row) => makeProductCode(Number(row.id)),
-    // cell: ({ row }) => makeProductCode(Number(row.original.id)),
   },
   {
     header: "Issue Date",

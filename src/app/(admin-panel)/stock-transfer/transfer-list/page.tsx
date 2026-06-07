@@ -33,7 +33,6 @@ export default async function TransferListPage({ searchParams }: Props) {
   };
 
   const challans = await getChallans({ where: whereBlock });
-  // console.log("Challans from transferlist:", challans);
 
   return (
     <>

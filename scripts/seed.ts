@@ -1,7 +1,6 @@
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
 const pool = mysql.createPool({
@@ -403,7 +402,6 @@ async function seed() {
     console.log("Starting database seeding...\n");
 
     for (const { table, data } of seedData) {
-      // Clear existing data
       await connection.execute(`TRUNCATE TABLE \`${table}\``);
       console.log(`Cleared table: ${table}`);
 
@@ -412,14 +410,12 @@ async function seed() {
         continue;
       }
 
-      // Get column names from the first record
       const columns = Object.keys(data[0]);
       const placeholders = columns.map(() => "?").join(", ");
       const columnNames = columns.map((col) => `\`${col}\``).join(", ");
 
       const query = `INSERT INTO \`${table}\` (${columnNames}) VALUES (${placeholders})`;
 
-      // Insert data using prepared statements
       for (const record of data) {
         const values = columns.map((col) => record[col]);
         await connection.execute(query, values);

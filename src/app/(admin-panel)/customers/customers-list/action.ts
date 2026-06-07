@@ -49,7 +49,6 @@ export async function updateFormAction(id: number, values: any) {
 
 export async function deleteCustomerAction(id: number) {
   const customer = await getCustomerById(id);
-  // console.log(customer, " from update customer action");
 
   try {
     await deleteCustomer(id);

@@ -195,7 +195,6 @@ export const OrdersReturnDropdown: React.FC<Prop> = ({ order }) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Order Details Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           className="sm:max-w-[750px] bg-slate-100 overflow-y-auto"
@@ -305,7 +304,6 @@ export const OrdersReturnDropdown: React.FC<Prop> = ({ order }) => {
         </SheetContent>
       </Sheet>
 
-      {/* Print Invoice */}
       <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {orderData && (
           <PrintInvoice
@@ -319,7 +317,6 @@ export const OrdersReturnDropdown: React.FC<Prop> = ({ order }) => {
         )}
       </div>
 
-      {/* Print Delivery Slip */}
       <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {orderData && settingsData && (
           <PrintDeliverySlip

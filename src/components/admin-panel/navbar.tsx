@@ -13,7 +13,6 @@ interface NavbarProps {
 
 export function Navbar({ title }: NavbarProps) {
   const branch = useStore(useBranch, (state) => state.branch);
-  // console.log(branch)
 
   return (
     <header className="z-10 supports-backdrop-blur:bg-background/60 sticky top-0 w-full shadow dark:shadow-secondary bg-background/95 backdrop-blur">

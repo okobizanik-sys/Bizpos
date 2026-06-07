@@ -63,7 +63,6 @@ export const loginUser = async (formData: FormData) => {
     password: formData.get("password") as string,
     branchId: formData.get("branchId") as string,
   };
-  // console.log(data, ":user from login form action");
 
   try {
     const result = await signIn("credentials", {

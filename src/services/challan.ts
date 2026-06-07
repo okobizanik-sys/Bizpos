@@ -4,7 +4,6 @@ import { CreateChallanInput } from "@/app/(admin-panel)/stock-transfer/transfer-
 import db from "@/db/database";
 import { ChallanItem } from "@/types/shared";
 
-// Create a new challan
 export async function createChallan(data: CreateChallanInput) {
   const [insertedData] = await db("challans").insert(data);
   const lastInsertedId = insertedData;
@@ -91,7 +90,6 @@ export async function getChallans(params: { where?: { [key: string]: any } }) {
   return challans;
 }
 
-// Delete a challan by unique identifier
 export async function deleteChallan(params: {
   where: { id: number }; // Adjust the unique field as necessary
 }) {

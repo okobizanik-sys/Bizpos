@@ -37,12 +37,10 @@ export const StockDetails: React.FC<Prop> = ({ product }) => {
   const [selectedBarcode, setSelectedBarcode] = React.useState("");
   const { toast } = useToast();
 
-  // console.log(product);
 
   const handleEditStock = (product: ProductWithStockPayload) => {
     setModalOpen(true);
     setSelectedBarcode(product.barcode);
-    console.log(product);
   };
 
   const updateStock = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -118,7 +116,6 @@ export const StockDetails: React.FC<Prop> = ({ product }) => {
                     fontSize={16}
                     fontOptions="bold"
                   />
-                  {/* <span className="font-semibold">{product.barcode}</span> */}
                 </li>
                 <li>
                   <span className="text-gray-600">Product Name: </span>

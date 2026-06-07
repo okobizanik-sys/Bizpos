@@ -79,7 +79,6 @@ export const StockAddContainer: React.FC = () => {
     getProducts({}).then((data) => setProducts(data.products));
   }, []);
 
-  // console.log(colors, sizes, selectedProduct);
 
   useEffect(() => {
     if (selectedProduct) {

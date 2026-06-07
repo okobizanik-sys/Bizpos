@@ -40,7 +40,6 @@ export async function createStock(
 ) {
   const dbs = trx || db;
 
-  // Match by stock batch so different suppliers remain separate rows.
   const existingStock = await dbs("stocks")
     .where({
       product_id: data.product_id,
@@ -59,14 +58,12 @@ export async function createStock(
     .first();
 
   if (existingStock) {
-    // Compute new average cost
     const newTotalQuantity = existingStock.quantity + data.quantity;
     const newAverageCost =
       (existingStock.cost * existingStock.quantity +
         data.cost * data.quantity) /
       newTotalQuantity;
 
-    // Update the existing stock entry with new cost & quantity
     await dbs("stocks")
       .where({ id: existingStock.id })
       .update({
@@ -84,7 +81,6 @@ export async function createStock(
     };
   }
 
-  // Insert new stock entry if barcode does not exist
   await dbs("stocks").insert({
     product_id: data.product_id,
     branch_id: data.branch_id,
@@ -142,7 +138,6 @@ export async function getStockHistories(params: {
     .leftJoin("categories", "products.category_id", "categories.id")
     .orderBy("created_at", "desc");
 
-  // Handle date filtering based on the createdAt field
   if (params.where?.created_at) {
     query.whereBetween("stock_histories.created_at", [
       params.where.created_at.gte,
@@ -169,7 +164,6 @@ export async function getStockHistoriesWithPagination(params: {
     .leftJoin("categories", "products.category_id", "categories.id")
     .orderBy("created_at", "desc");
 
-  // Handle date filtering based on the createdAt field
   if (params.where?.created_at) {
     query.whereBetween("stock_histories.created_at", [
       params.where.created_at.gte,
@@ -188,8 +182,6 @@ export async function getStocksByProduct(params: {
   page?: number;
   per_page?: number;
 }) {
-  // const { page = 1, per_page = 10 } = params;
-  // const offset = (page - 1) * per_page;
 
   return (
     db("stocks")
@@ -206,8 +198,6 @@ export async function getStocksByProduct(params: {
           query.where("products.name", "like", `%${params.filters.search}%`);
         }
       })
-      // .limit(per_page)
-      // .offset(offset)
       .select(
         "stocks.*",
         "products.id as productId",
@@ -220,7 +210,6 @@ export async function getStocksByProduct(params: {
         "colors.name as colorName",
         "sizes.name as sizeName",
         "images.url"
-        // db.raw("COUNT(DISTINCT stocks.id) as stockQuantity")
       )
   );
 }
@@ -262,7 +251,6 @@ export async function getStocksByProductWithPagination(params: {
       "colors.name as colorName",
       "sizes.name as sizeName",
       "images.url"
-      // db.raw("COUNT(DISTINCT stocks.id) as stockQuantity")
     );
 }
 
@@ -365,7 +353,6 @@ export async function getDamagedStocks(params: {
       "branches.name as branchName",
       "branches.id as branchId",
       "categories.name as categoryName"
-      // db.raw("COUNT(stocks.barcode) as quantity")
     )
     .groupBy("stocks.barcode")
     .orderBy("created_at", "desc");
@@ -446,7 +433,6 @@ export async function getDamagedStocksWithPagination(params: {
       "branches.name as branchName",
       "branches.id as branchId",
       "categories.name as categoryName"
-      // db.raw("COUNT(stocks.barcode) as quantity")
     )
     .groupBy("stocks.barcode")
     .orderBy("created_at", "desc");
@@ -563,34 +549,7 @@ export async function increaseStock(
 ) {
   const dbs = trx || db;
 
-  // const existingStock = await dbs("stocks")
-  //   .where({
-  //     // product_id: productId,
-  //     branch_id: branchId,
-  //     // color_id: colorId,
-  //     // size_id: sizeId,
-  //     barcode,
-  //   })
-  //   .first();
 
-  // if (existingStock) {
-  //   await dbs("stocks")
-  //     .where({ id: existingStock.id })
-  //     .increment("quantity", quantity);
-  // } else {
-  //   await dbs("stocks").insert({
-  //     product_id: productId,
-  //     branch_id: branchId,
-  //     color_id: colorId,
-  //     size_id: sizeId,
-  //     quantity,
-  //     cost,
-  //     barcode,
-  //     condition: condition,
-  //     created_at: new Date(),
-  //     updated_at: new Date(),
-  //   });
-  // }
 
   const increasedStock = await dbs("stocks").insert({
     product_id: productId,
@@ -630,7 +589,6 @@ export async function updateStockBranchId(
 ) {
   const dbs = db || trx;
 
-  // Fetch existing stock records sorted by the oldest update first
   const stockEntries = await dbs("stocks")
     .where("barcode", barcode)
     .andWhere("branch_id", "<>", toBranchId)
@@ -645,7 +603,6 @@ export async function updateStockBranchId(
     const updateQty = Math.min(stock.quantity, remainingQuantity);
     remainingQuantity -= updateQty;
 
-    // Reduce stock from the old branch
     await dbs("stocks")
       .where("id", stock.id)
       .update({
@@ -653,13 +610,11 @@ export async function updateStockBranchId(
         updated_at: new Date(),
       });
 
-    // Check if stock already exists in the destination branch
     const existingStock = await dbs("stocks")
       .where({ barcode, branch_id: toBranchId })
       .first();
 
     if (existingStock) {
-      // Increase quantity at the destination branch
       await dbs("stocks")
         .where("id", existingStock.id)
         .update({
@@ -667,7 +622,6 @@ export async function updateStockBranchId(
           updated_at: new Date(),
         });
     } else {
-      // Insert new stock entry if none exists
       await dbs("stocks").insert({
         barcode,
         branch_id: toBranchId,

@@ -221,9 +221,6 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     const existingItem = state.itemList.find((i) => i.barcode === item.barcode);
 
     let updatedItemList;
-    // if (state.itemList.length === 0) {
-    //   state.setOrderId();
-    // }
     if (existingItem) {
       updatedItemList = state.itemList.map((i) =>
         i.barcode === item.barcode
@@ -324,20 +321,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
   addChallanItem: (item) => {
     const state = get();
-    // const existingChallanItem = state.challanItemList.find(
-    //   (i) => i.challan_no === item.challan_no
-    // );
 
-    // let updatedItemChallanList;
-    // if (existingChallanItem) {
-    //   updatedItemChallanList = state.challanItemList.map((i) =>
-    //     i.challan_no === item.challan_no
-    //       ? { ...i, quantity: i.quantity + item.quantity }
-    //       : i
-    //   );
-    // } else {
-    //   updatedItemChallanList = [...state.challanItemList, item];
-    // }
 
     set({
       challanItemList: item,
@@ -413,8 +397,6 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   },
 
   setBarcode: async () => {
-    // const newBarcode = await createBarcode();
-    // set({ generatedBarcode: newBarcode });
   },
 
   setChallanNo: () => {
@@ -437,10 +419,6 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     get().calculateTotals();
   },
 
-  // setDiscountAmount: (amount) => {
-  //   set({ discount: amount });
-  //   get().calculateTotals();
-  // },
   setDiscountAmount: (amount) => {
     set((state) => ({
       discount: state.discount === amount ? 0 : amount,

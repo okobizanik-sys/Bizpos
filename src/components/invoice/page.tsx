@@ -26,7 +26,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
     const [printableLogo, setPrintableLogo] = React.useState<string>("");
     const { data: session } = useSession();
 
-    // Fetch settings once on mount
     React.useEffect(() => {
       fetchSetting().then((data) => {
         if (data) {
@@ -35,7 +34,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
       });
     }, []);
 
-    // Build absolute URL for logo so it works inside print iframes
     const logoSrc = React.useMemo(() => {
       if (!settingsData?.logo_image_url) return "";
       const generated = fileUrlGenerator(settingsData.logo_image_url);
@@ -45,8 +43,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
       return `${window.location.origin}${generated}`;
     }, [settingsData?.logo_image_url]);
 
-    // Convert logo to PNG data URL via canvas
-    // Fixes .avif and other formats that don't render in print iframes
     React.useEffect(() => {
       if (!logoSrc) {
         setPrintableLogo("");
@@ -68,7 +64,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           setPrintableLogo(dataUrl);
           setLogoLoadFailed(false);
         } catch (e) {
-          // Canvas tainted (CORS) — fall back to original src
           console.warn("Canvas conversion failed, using src directly:", e);
           setPrintableLogo(logoSrc);
           setLogoLoadFailed(false);
@@ -91,7 +86,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
         ref={ref}
         className="w-[80mm] mx-auto border px-2 py-[30px] text-xs font-medium"
       >
-        {/* ── Header ── */}
         <div className="w-full flex flex-col justify-center items-center text-center py-2">
           {printableLogo && !logoLoadFailed ? (
             <img
@@ -117,7 +111,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           <p className="text-[10px]">Website : www.petvet-bd.com</p>
         </div>
 
-        {/* ── Order Meta ── */}
         <div className="w-full border-b border-black py-2">
           <div className="flex justify-between items-center">
             <p>Order ID :</p>
@@ -135,7 +128,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           </div>
         </div>
 
-        {/* ── Customer ── */}
         <div className="w-full py-2 border-b border-black">
           <div className="flex justify-between items-center">
             <p>Customer:</p>
@@ -147,7 +139,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           </div>
         </div>
 
-        {/* ── Line Items ── */}
         <div className="w-full">
           {orderData?.map((orderItem, oi) =>
             orderItem.items.map((item, ii) => (
@@ -169,7 +160,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           )}
         </div>
 
-        {/* ── Totals ── */}
         {totals?.map((total, index) => (
           <div key={index}>
             <div className="py-2 border-b border-black border-dashed">
@@ -207,7 +197,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           </div>
         ))}
 
-        {/* ── Policy ── */}
         <div className="py-2 border-b border-black text-center">
           <p>
             Items may be exchanged subject to Petvet Clinic &amp; Diagnostic
@@ -215,7 +204,6 @@ const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
           </p>
         </div>
 
-        {/* ── Footer ── */}
         <div className="flex flex-col justify-center items-center py-2">
           <p className="text-center">THANK YOU FOR SHOPPING !</p>
           <Barcode value={order.order_id} width={2} height={25} fontSize={10} />

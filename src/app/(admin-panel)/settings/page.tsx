@@ -14,7 +14,6 @@ export const revalidate = 0;
 
 export default async function SettingsPage() {
   const setting = await getSettings();
-  // console.log(setting, "settig from settig page....................");
   return (
     <>
       <Navbar title="Settings" />

@@ -24,8 +24,6 @@ export type ProductWithStockPayload = {
 
 export type StockFilter = {
   search: string;
-  // category: string;
-  // branch: string;
 };
 
 export type StockSummary = {
@@ -45,8 +43,6 @@ export default async function StockListPage({ searchParams }: Props) {
 
   const filter: StockFilter = {
     search: searchParams.search as string,
-    // category: searchParams.category as string,
-    // branch: searchParams.branch as string,
   };
 
   const stockCounts = await getTotalStockSummary();

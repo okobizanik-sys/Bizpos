@@ -21,86 +21,14 @@ export type DashboardSummary = {
   >;
 };
 
-// export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
-//   const { fromDate, toDate, search } = filters;
 
-//   return await db.transaction(async (trx) => {
-//     const query = trx("orders")
-//       .select(
-//         "orders.*",
-//         "branches.id as branchId",
-//         "branches.name as branchName",
-//         "customers.customer",
-//         "customers.phone",
-//         "customers.address"
-//       )
-//       .where("orders.status", "COMPLETED")
-//       .orWhere("orders.status", "EXCHANGED")
-//       .leftJoin("branches", "orders.branch_id", "branches.id")
-//       .leftJoin("customers", "orders.customer_id", "customers.id")
-//       .orderBy("date", "desc");
 
-//     // Apply filters if present
-//     if (search) {
-//       query.where((builder) => {
-//         builder
-//           .where("customers.customer", "Like", `%${search}%`)
-//           .orWhere("customers.phone", "Like", `%${search}%`)
-//           .orWhere("orders.order_id", "Like", `%${search}%`);
-//       });
-//     }
 
-//     if (fromDate && toDate) {
-//       query.whereBetween("orders.date", [fromDate, toDate]);
-//     } else if (fromDate) {
-//       query.where("orders.date", ">=", fromDate);
-//     } else if (toDate) {
-//       query.where("orders.date", "<=", toDate);
-//     }
 
-//     // Fetch the sales data
-//     const salesData = await query;
 
-//     const formattedSales = await Promise.all(
-//       salesData.map(async (order) => {
-//         const orderItems = await trx("order_items")
-//           .where("order_items.order_id", order.id)
-//           .leftJoin("products", "order_items.product_id", "products.id")
-//           .select("order_items.*", "products.id as productId");
 
-//         // console.log(
-//         //   orderItems,
-//         //   ":orderitems from sales api. Length:",
-//         //   orderItems.length
-//         // );
-//         // Calculate COGS and stock value
-//         // const { totalCOGS } = await getTotalSalesSummary();
-//         const { COGS } = await calculateCOGSAndStock(orderItems, trx);
 
-//         return {
-//           date: order.date,
-//           branchId: order.branchId,
-//           branchName: order.branchName,
-//           order_id: order.order_id,
-//           customer: order.customer,
-//           phone: order.phone,
-//           address: order.address,
-//           total: order.total,
-//           sub_total: order.sub_total,
-//           vat: order.vat,
-//           paid_amount: order.paid_amount,
-//           due_amount: order.due_amount,
-//           discount: order.discount,
-//           delivery_charge: order.delivery_charge,
-//           cost_of_goods_sold: Math.round(COGS),
-//         };
-//       })
-//     );
 
-//     logger.info("Sales data fetched successfully");
-//     return formattedSales;
-//   });
-// }
 
 export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
   await ensureSalesSchema();

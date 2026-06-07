@@ -67,7 +67,6 @@ export const SettingsTable: React.FC<Props> = ({ data }) => {
         <Label className="text-lg font-bold">Settings</Label>
         <Button
           variant="outline"
-          // size="icon"
           className="border-2 border-green-400 text-green-400"
           onClick={() => setSheetOpen((prev) => !prev)}
         >

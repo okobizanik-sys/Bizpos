@@ -51,16 +51,8 @@ export default function DamageProducts() {
   const { toast } = useToast();
   const printerRef = React.useRef(null);
 
-  // const handleExportToCsv = () => {
-  //   const headers = table
-  //     .getHeaderGroups()
-  //     .map((x) => x.headers)
-  //     .flat();
 
-  //   const rows = table.getRowModel().rows;
 
-  //   exportToCsv("stock-list-" + format(new Date(), "YMdHHmmss"), headers, rows);
-  // };
 
   const handlePrinter = useReactToPrint({
     content: () => printerRef.current,
@@ -84,36 +76,7 @@ export default function DamageProducts() {
     }
   }, [branch]);
 
-  // console.log("damagedStocks from damaged products:", damagedStocks);
-  // console.log("Stocks from  products:", stocks);
 
-  // const addStockToItemList = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   const stock = stocks.find((stock) => stock.barcode === selectedBarcode);
-  //   if (stock) {
-  //     // if (itemList.length === 0) {
-  //     //   setOrderId();
-  //     // }
-  //     addItem({
-  //       id: stock.id,
-  //       barcode: stock.barcode,
-  //       productId: stock.productId,
-  //       name: stock.name,
-  //       colorId: stock.color_id,
-  //       colorName: stock.colorName || "-",
-  //       sizeId: stock.size_id,
-  //       sizeName: stock.sizeName || "-",
-  //       quantity: selectedQty,
-  //       selling_price: stock.selling_price,
-  //       categoryName: stock.categoryName,
-  //       sku: stock.sku,
-  //       cost: stock.cost,
-  //       condition: stock.condition,
-  //     });
-  //     setSelectedQty(0);
-  //     setQtyModalOpen(false);
-  //   }
-  // };
 
   const barcodeSelected = (code: string | null | void) => {
     if (code) {
@@ -142,8 +105,6 @@ export default function DamageProducts() {
           cost: stock.cost,
           condition: stock.condition,
         });
-        // setSelectedQty(0);
-        // setQtyModalOpen(false);
       }
     }
   };
@@ -156,7 +117,6 @@ export default function DamageProducts() {
 
       const updatedDamagedStocks = await getDamagedStocks({
         where: { branch_id: branch.id },
-        // distinct: ["barcode"],
       });
       setDamagedStocks(updatedDamagedStocks);
 
@@ -166,7 +126,6 @@ export default function DamageProducts() {
         variant: "default",
       });
     } catch (error: any) {
-      // console.error(error);
 
       toast({
         title: "Failed to add damaged product",
@@ -279,14 +238,6 @@ export default function DamageProducts() {
 
       <Card className=" m-4 p-4 rounded-lg overflow-scroll no-scrollbar ">
         <div className="flex gap-2 justify-end items-center my-1">
-          {/* <Button
-            variant="outline"
-            size="icon"
-            className="border-2 border-green-400 text-green-400 w-8 h-8"
-            onClick={handleExportToCsv}
-          >
-            <FileSpreadsheet />
-          </Button> */}
           <Button
             variant="outline"
             size="icon"
@@ -301,11 +252,9 @@ export default function DamageProducts() {
           <TableHeader className="bg-primary">
             <TableRow>
               <TableHead className="h-8 text-white">SL</TableHead>
-              {/* <TableHead className="h-8 text-white">Item Code</TableHead> */}
               <TableHead className="h-8 text-white">Barcode</TableHead>
               <TableHead className="h-8 text-white">Product Name</TableHead>
               <TableHead className="h-8 text-white">Category</TableHead>
-              {/* <TableHead className="h-8 text-white">SKU</TableHead> */}
               <TableHead className="h-8 text-white">Stock Value</TableHead>
               <TableHead className="h-8 text-white">Sell Value</TableHead>
               <TableHead className="h-8 text-white">Qty</TableHead>
@@ -316,11 +265,9 @@ export default function DamageProducts() {
             {damagedStocks.map((item, index) => (
               <TableRow key={item.barcode}>
                 <TableCell className="py-2">{index + 1}</TableCell>
-                {/* <TableCell className="py-2">{item.productId}</TableCell> */}
                 <TableCell className="py-2">{item.barcode}</TableCell>
                 <TableCell className="py-2 w-60">{item.name}</TableCell>
                 <TableCell className="py-2 w-60">{item.categoryName}</TableCell>
-                {/* <TableCell className="py-2 w-60">{item.sku}</TableCell> */}
                 <TableCell className="py-2 w-60">{Number(item.cost)}</TableCell>
                 <TableCell className="py-2">
                   {Number(item.selling_price)}
@@ -344,28 +291,6 @@ export default function DamageProducts() {
         </Table>
       </Card>
 
-      {/* Dialogue box */}
-      {/* <Dialog open={qtyModalOpen} onOpenChange={setQtyModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Quantity (In Stock: {qtyLimit})</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={addStockToItemList} className="flex gap-2">
-            <Input
-              className="w-[200px]"
-              type="number"
-              max={qtyLimit}
-              min={1}
-              value={selectedQty}
-              required
-              onChange={(e) => setSelectedQty(parseInt(e.target.value))}
-            />
-            <Button className="flex-1" type="submit">
-              Add
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog> */}
 
       <div className="hidden">
         <DamageProductSlip

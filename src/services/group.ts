@@ -3,13 +3,11 @@
 import db from "@/db/database";
 import { Groups } from "@/types/shared";
 
-// Get all groups
 export async function getGroups(): Promise<Groups[]> {
   const groups = await db("groups").select("groups.*").orderBy("name", "asc");
   return groups;
 }
 
-// Get a specific group by unique identifier
 export async function getGroup(params: {
   where: { id: number }; // Adjust according to your unique identifier
 }) {
@@ -20,7 +18,6 @@ export async function getGroup(params: {
   return group;
 }
 
-// Create a new group
 export async function createGroup(data: { name: string }) {
   const [insertedData] = await db("groups").insert(data);
   const lastInsertedId = insertedData;
@@ -29,7 +26,6 @@ export async function createGroup(data: { name: string }) {
   return group;
 }
 
-// Update an existing group
 export async function updateGroup(params: {
   where: { id: number }; // Adjust according to your unique identifier
   data: { name?: string }; // Adjust fields as necessary
@@ -44,7 +40,6 @@ export async function updateGroup(params: {
   return group;
 }
 
-// Delete a group
 export async function deleteGroup(params: {
   where: { id: number }; // Adjust according to your unique identifier
 }) {

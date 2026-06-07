@@ -59,7 +59,6 @@ export const GlobalStockView: React.FC = () => {
     quantity: number;
   };
 
-  // Update function to properly type `acc` and `stock`
   const stocksGroupedByBranch = stocks.reduce(
     (
       acc: Record<string, Record<string, { count: number; stocks: Stock[] }>>,
@@ -67,17 +66,14 @@ export const GlobalStockView: React.FC = () => {
     ) => {
       const branchName = stock.branch.name;
 
-      // Initialize the branch grouping if it doesn't exist
       if (!acc[branchName]) {
         acc[branchName] = {};
       }
 
-      // Initialize the barcode grouping within the branch if it doesn't exist
       if (!acc[branchName][stock.barcode]) {
         acc[branchName][stock.barcode] = { count: 0, stocks: [] };
       }
 
-      // Increment the count for this barcode within this branch
       acc[branchName][stock.barcode].count += 1;
       acc[branchName][stock.barcode].stocks.push(stock);
 
@@ -95,7 +91,6 @@ export const GlobalStockView: React.FC = () => {
       });
     }
   }, [product, selectedProduct, toast]);
-  // console.log(product);
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -130,9 +125,6 @@ export const GlobalStockView: React.FC = () => {
                   <TableCell className="px-4 py-2">
                     {product.categoryName}
                   </TableCell>
-                  {/* <TableCell className="px-4 py-2">
-                    {product.quantity}
-                  </TableCell> */}
                   <TableCell className="px-4 py-2">
                     {product.stocks.reduce(
                       (total, stock) => total + stock.quantity,

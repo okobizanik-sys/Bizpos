@@ -24,7 +24,7 @@ export default async function ProductListPage({ searchParams }: Props) {
 
   const limit = typeof per_page === "string" ? parseInt(per_page) : 20;
   const currentPage = typeof page === "string" ? parseInt(page) : 1;
-  const skip = (currentPage - 1) * limit; // Calculate the offset
+  const skip = (currentPage - 1) * limit;
 
   const filter: ProductFilter = {
     filter_global: searchParams.filter_global as string,
@@ -33,8 +33,8 @@ export default async function ProductListPage({ searchParams }: Props) {
 
   const data = await getProducts({
     where: filter,
-    skip, // Add this
-    take: limit, // Add this
+    skip,
+    take: limit,
   });
 
   const [result] = await db("products").count("* as total");
@@ -42,7 +42,6 @@ export default async function ProductListPage({ searchParams }: Props) {
   const pageCount = Math.ceil(totals / limit);
 
   const categories = await getCategories();
-  console.log(data, "data from products");
 
   return (
     <ContentLayout title="Product List">
@@ -51,8 +50,8 @@ export default async function ProductListPage({ searchParams }: Props) {
         data={data.products.map((product) => ({
           ...product,
           imageUrl: product.imageUrl
-            ? fileUrlGenerator(product.imageUrl) // existing image
-            : "/images/default-product.png", // fallback image
+            ? fileUrlGenerator(product.imageUrl)
+            : "/images/default-product.png",
         }))}
         pageCount={pageCount}
         categories={categories}

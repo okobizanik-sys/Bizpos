@@ -46,8 +46,6 @@ export const OrderSelector: React.FC<OrderSelectorProps> = ({
               <span>Phone: {order.phone}</span>
             </span>
             <span className="text-xs text-muted-foreground">
-              {/* Phone: {order.customer?.phone}, Total Items:{" "} */}
-              {/* {order.orderItems.length} */}
             </span>
           </ComboboxItem>
         ))}

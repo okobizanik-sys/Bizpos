@@ -9,12 +9,6 @@ export const columns: ColumnDef<StockHistory>[] = [
     accessorKey: "created_at",
     cell: ({ row }) => formatDate(row.original.created_at, "dd/MM/yyyy"),
   },
-  // {
-  //   header: "Code",
-  //   accessorKey: "product_id",
-  //   accessorFn: (row) => makeProductCode(Number(row.product_id)),
-  //   cell: ({ row }) => makeProductCode(Number(row.original.product_id)),
-  // },
   {
     header: "Name",
     accessorKey: "productName",

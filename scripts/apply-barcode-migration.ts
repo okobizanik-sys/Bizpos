@@ -1,7 +1,3 @@
-/**
- * One-off: applies the barcode columns to products table, bypassing the corrupt migration state.
- * Run: npx ts-node scripts/apply-barcode-migration.ts
- */
 import knex from "knex";
 import dotenv from "dotenv";
 
@@ -40,7 +36,6 @@ async function main() {
   if (!hasSerialId) {
     console.log("Adding 'barcode_serial_id' column to products...");
     await db.schema.alterTable("products", (table) => {
-      // Must be INT UNSIGNED to match barcode_serials.id (created by increments())
       table
         .integer("barcode_serial_id")
         .unsigned()

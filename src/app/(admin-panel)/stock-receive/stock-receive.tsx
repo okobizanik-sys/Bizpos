@@ -38,16 +38,8 @@ export default function StockReceive() {
   const { toast } = useToast();
   const printerRef = React.useRef(null);
 
-  // const handleExportToCsv = () => {
-  //   const headers = table
-  //     .getHeaderGroups()
-  //     .map((x) => x.headers)
-  //     .flat();
 
-  //   const rows = table.getRowModel().rows;
 
-  //   exportToCsv("stock-list-" + format(new Date(), "YMdHHmmss"), headers, rows);
-  // };
 
   const handlePrinter = useReactToPrint({
     content: () => printerRef.current,
@@ -86,8 +78,6 @@ export default function StockReceive() {
     }
   }, [selectedChallanNo, challans]);
 
-  // console.log(challans, "challans from stock receive.");
-  // console.log(challanItemList, "challanItemList from stock receive.");
 
   const confirmTransfer = async () => {
     try {
@@ -102,7 +92,6 @@ export default function StockReceive() {
         });
       }
     } catch (error: any) {
-      // console.error(error.message);
       toast({
         title: "Error",
         description: error.message,
@@ -202,14 +191,6 @@ export default function StockReceive() {
         {challanItemList.length > 0 && (
           <div>
             <div className="flex gap-2 justify-end items-center my-1">
-              {/* <Button
-                variant="outline"
-                size="icon"
-                className="border-2 border-green-400 text-green-400 w-8 h-8"
-                onClick={handleExportToCsv}
-              >
-                <FileSpreadsheet />
-              </Button> */}
               <Button
                 variant="outline"
                 size="icon"

@@ -157,7 +157,6 @@ export default function PrintLabelPage() {
             )}
           </div>
 
-          {/* Bulk Barcode Labels */}
           <div className="hidden">
             <div ref={printerRef} className="">
               {Array.from({ length: quantity }).map((_, index) => (
@@ -168,14 +167,6 @@ export default function PrintLabelPage() {
                   <h1 className="text-xs font-bold">
                     {process.env.NEXT_PUBLIC_BRAND_NAME}
                   </h1>
-                  {/* {nameCheck && (
-                    <p className="text-xs font-semibold">{stock.name}</p>
-                  )}
-                  {variantCheck && (
-                    <p className="text-xs font-semibold">
-                      {stock.colorName} - {stock.sizeName}
-                    </p>
-                  )} */}
                   {nameCheck ? (
                     <p className="text-xs font-semibold">{stock.name}</p>
                   ) : (
@@ -196,13 +187,6 @@ export default function PrintLabelPage() {
                     height={25}
                     fontSize={10}
                   />
-                  {/* {priceCheck && (
-                    <p className="text-xs font-semibold">
-                      PRICE:{" "}
-                      <span className="font-bold">{stock.selling_price}</span>{" "}
-                      TK
-                    </p>
-                  )} */}
                   {priceCheck ? (
                     <p className="text-xs font-semibold">
                       PRICE:{" "}

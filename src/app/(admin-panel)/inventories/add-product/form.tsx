@@ -109,7 +109,6 @@ export const AddProductForm: React.FC = () => {
         form.reset();
       }
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create product",
         description: error.message,
@@ -370,7 +369,6 @@ export const AddProductForm: React.FC = () => {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    {/* <Input placeholder="Enter description" {...field} /> */}
                     <ReactQuill {...field} />
                   </FormControl>
                   <FormDescription className="text-red-400 text-xs min-h-4">

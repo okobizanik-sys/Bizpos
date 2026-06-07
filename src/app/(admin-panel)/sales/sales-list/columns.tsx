@@ -1,4 +1,3 @@
-// columns.ts
 import { ColumnDef } from "@tanstack/react-table";
 import { SalesDropdown } from "./dropdown";
 import { SalesData } from "@/types/shared";
@@ -48,10 +47,6 @@ export const columns: ColumnDef<SalesData>[] = [
     header: "COGS",
     accessorKey: "cost_of_goods_sold", // Matches SalesData
   },
-  // {
-  //   header: "VAT",
-  //   accessorKey: "vat", // Matches SalesData, optional
-  // },
   {
     header: "Action",
     cell: ({ row }) => {

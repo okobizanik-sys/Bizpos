@@ -85,7 +85,6 @@ const DeliverySlip = React.forwardRef<HTMLDivElement, DeliverySlipProps>(
           </div>
 
           <div className="flex justify-between border-y divide-x divide-gray-700 border-gray-700">
-            {/* <div>Date: {orderData.date}</div> */}
             <div className="pl-1 py-2 w-1/3">
               <p>Order ID:</p>
               <h1 className="font-semibold">{orderData.orderId}</h1>
@@ -103,7 +102,6 @@ const DeliverySlip = React.forwardRef<HTMLDivElement, DeliverySlipProps>(
           <div className="p-1 text-sm">
             <p>
               <span className="font-semibold">Return & Exchange:</span>{" "}
-              {/* {settingsData?.return_privacy_policy || ""} */}
               <span
                 dangerouslySetInnerHTML={{
                   __html: String(settingsData?.return_privacy_policy),

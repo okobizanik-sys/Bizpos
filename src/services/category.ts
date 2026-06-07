@@ -2,12 +2,10 @@
 
 import db from "@/db/database";
 
-// Get all categories
 export async function getCategories() {
   return await db("categories").orderBy("name", "asc");
 }
 
-// Get a category by unique identifier
 export async function getCategory(params: {
   where: { id: number }; // Adjust the unique field as necessary
 }) {
@@ -18,13 +16,11 @@ export async function getCategory(params: {
   return category;
 }
 
-// Create a new category
 export async function createCategory(data: { name: string }) {
   const [category] = await db("categories").insert(data);
   return category;
 }
 
-// Update a category by unique identifier
 export async function updateCategory(params: {
   where: { id: number }; // Adjust the unique field as necessary
   data: { name?: string }; // Adjust fields as necessary
@@ -39,7 +35,6 @@ export async function updateCategory(params: {
   return category;
 }
 
-// Delete a category by unique identifier
 export async function deleteCategory(params: {
   where: { id: number }; // Adjust the unique field as necessary
 }) {

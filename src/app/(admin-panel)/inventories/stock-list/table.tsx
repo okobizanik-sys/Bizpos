@@ -41,7 +41,6 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
   const [stocks, setStocks] = React.useState<ProductWithStockPayload[]>([]);
-  // console.log(stocks, "stocks from stock table");
 
   const { page, per_page, pageIndex, pageSize, pagination, setPagination } =
     usePagination();
@@ -102,12 +101,10 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
     }
   }, [branch, filter, pageIndex, pageSize]);
 
-  // console.log(stocks, "stock produts from stock list");
 
   const table = useReactTable({
     data: stocks,
     columns,
-    // pageCount: pageCount ?? -1,
     state: {
       pagination,
     },
@@ -231,18 +228,6 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
       </Table>
 
       <DataTablePagination table={table} />
-      {/* <DataTablePagination
-        table={table}
-        pageIndex={pageIndex}
-        pageSize={pageSize}
-        totalCount={stocks.length} // Ideally, fetch total stock count separately
-        onPageChange={(newPage) =>
-          setPagination((prev) => ({ ...prev, pageIndex: newPage }))
-        }
-        onPageSizeChange={(newSize) =>
-          setPagination((prev) => ({ ...prev, pageSize: newSize }))
-        }
-      /> */}
 
       <div className="hidden">
         <PrintPageComponet

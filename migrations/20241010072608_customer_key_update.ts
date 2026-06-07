@@ -14,7 +14,6 @@ export async function up(knex: Knex): Promise<void> {
 
 export async function down(knex: Knex): Promise<void> {
   return knex.schema.table("customers", function (table) {
-    // Remove foreign key columns
     table.dropColumn("customer");
     table.dropColumn("group_id");
     table.dropColumn("membership_id");

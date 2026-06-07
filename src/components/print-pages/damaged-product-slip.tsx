@@ -84,11 +84,9 @@ const DamageProductSlip = React.forwardRef<
           <TableHeader className="bg-primary">
             <TableRow>
               <TableHead className="h-8 text-white">SL</TableHead>
-              {/* <TableHead className="h-8 text-white">Item Code</TableHead> */}
               <TableHead className="h-8 text-white">Barcode</TableHead>
               <TableHead className="h-8 text-white">Product Name</TableHead>
               <TableHead className="h-8 text-white">Category</TableHead>
-              {/* <TableHead className="h-8 text-white">SKU</TableHead> */}
               <TableHead className="h-8 text-white">Stock Value</TableHead>
               <TableHead className="h-8 text-white">Sell Value</TableHead>
               <TableHead className="h-8 text-white">Qty</TableHead>
@@ -99,11 +97,9 @@ const DamageProductSlip = React.forwardRef<
             {damagedStocks.map((item, index) => (
               <TableRow key={item.barcode}>
                 <TableCell className="py-2">{index + 1}</TableCell>
-                {/* <TableCell className="py-2">{item.productId}</TableCell> */}
                 <TableCell className="py-2">{item.barcode}</TableCell>
                 <TableCell className="py-2 w-60">{item.name}</TableCell>
                 <TableCell className="py-2 w-60">{item.categoryName}</TableCell>
-                {/* <TableCell className="py-2 w-60">{item.sku}</TableCell> */}
                 <TableCell className="py-2 w-60">{Number(item.cost)}</TableCell>
                 <TableCell className="py-2">
                   {Number(item.selling_price)}

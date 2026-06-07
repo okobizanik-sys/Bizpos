@@ -45,7 +45,6 @@ export async function ensureOrderItemsSchema() {
   }
 }
 
-// Create a new order
 export async function createOrder(data: Orders) {
   const [insertResult] = await db("orders").insert(data);
   const lastInsertId = insertResult;
@@ -55,48 +54,12 @@ export async function createOrder(data: Orders) {
   return order;
 }
 
-// Get all orders with optional filters
-// export async function getOrders(filters: OrderFilter): Promise<Orders[]> {
-//   const { search, status, fromDate, toDate } = filters;
 
-//   const query = db("orders")
-//     .leftJoin("customers", "orders.customer_id", "customers.id")
-//     .select(
-//       "orders.*",
-//       "customers.customer",
-//       "customers.phone",
-//       "customers.address"
-//     )
-//     .orderBy("date", "desc");
-//   if (search) {
-//     query.where(function () {
-//       this.where("customers.customer", "LIKE", `%${search}%`)
-//         .orWhere("customers.phone", "LIKE", `%${search}%`)
-//         .orWhere("orders.order_id", "LIKE", `%${search}%`); // Adjust field names as necessary
-//     });
-//   }
 
-//   if (status) {
-//     // query.andWhere("orders.status", status);
-//     if (status === "ALL") {
-//       query.whereIn("orders.status", ["COMPLETED", "EXCHANGED"]);
-//     } else {
-//       query.andWhere("orders.status", status);
-//     }
-//   }
 
-//   if (fromDate) {
-//     query.andWhere("orders.date", ">=", fromDate);
-//   }
 
-//   if (toDate) {
-//     query.andWhere("orders.date", "<=", toDate);
-//   }
 
-//   const orders = await query;
 
-//   return orders;
-// }
 
 export async function getOrders(
   filters: OrderFilter & { page?: number; per_page?: number; branchId?: number }
@@ -279,7 +242,6 @@ export async function getOrderById(id: number): Promise<OrderItems | null> {
   return { ...order, orderItems };
 }
 
-// Get an order by ID
 export async function getOrderByIdWithItems(params: {
   where: { [key: string]: any };
 }): Promise<OrderWithItem[] | null> {
@@ -329,7 +291,6 @@ export async function getOrderByIdWithItems(params: {
         items: [],
       };
     }
-    // Use a combination of unique fields to filter out duplicate items
     const isDuplicate = acc[item.orderId].items.some(
       (i: any) => i.barcode === item.barcode
     );
@@ -395,7 +356,6 @@ export async function getOrdersWithItems(params: {
     .orderBy("orders.created_at", "desc");
 
   const orderItems = await orderItemsQuery;
-  // Group order items by orderId
   const orders = orderItems.reduce((acc: any, item: any) => {
     if (!acc[item.orderId]) {
       acc[item.orderId] = {
@@ -416,7 +376,6 @@ export async function getOrdersWithItems(params: {
         items: [],
       };
     }
-    // Use a combination of unique fields to filter out duplicate items
     const isDuplicate = acc[item.orderId].items.some(
       (i: any) => i.barcode === item.barcode
     );
@@ -444,15 +403,12 @@ export async function getOrdersWithItems(params: {
   return Object.values(orders);
 }
 
-// Update order status
 export async function updateOrderStatus(
   id: number,
   status: "COMPLETED" | "EXCHANGED" | "RETURN"
 ) {
   const order = await db("orders").where({ id }).update({ status });
 
-  // const [order] = await db("orders").where({ insertResult });
-  // logger.info(`Order status updated: ${order.id} - ${status}`);
   return order;
 }
 
@@ -461,18 +417,15 @@ export async function updateOrder(
   data: Partial<Orders>,
   itemsData: OrderItem[] = []
 ) {
-  // Update order details
   await db("orders").where({ id }).update(data);
   const [updatedOrder] = await db("orders").where({ id });
 
   logger.info(`Order updated: ${updatedOrder.id}`);
 
-  // Update order items if provided
   if (itemsData.length > 0) {
     for (const item of itemsData) {
       const { id: itemId, ...updateFields } = item;
 
-      // Check if the item has an ID, update if it does, otherwise insert as new item
       if (itemId) {
         const existingItem = await db("order_items")
           .where({ id: itemId, order_id: id })
@@ -487,14 +440,12 @@ export async function updateOrder(
           logger.warn(`Order item with id ${itemId} not found for update.`);
         }
       } else {
-        // Insert a new item if itemId is undefined
         await db("order_items").insert({ ...item, order_id: id });
         logger.info(`New order item created: ${item.product_id}`);
       }
     }
   }
 
-  // Retrieve the updated order with its items to return
   const updatedOrderWithItems = await getOrderById(id);
   return updatedOrderWithItems;
 }
@@ -504,13 +455,11 @@ export async function updateOrderByOrderId(
   data: Partial<Orders>,
   itemsData: OrderItem[] = []
 ) {
-  // Update order details
   await db("orders").where({ order_id: orderId }).update(data);
   const [updatedOrder] = await db("orders").where({ order_id: orderId });
 
   logger.info(`Order updated: ${updatedOrder.id}`);
 
-  // Retrieve the updated order with its items to return
   const updatedOrderWithItems = await getOrderById(updatedOrder.id);
   return updatedOrderWithItems;
 }

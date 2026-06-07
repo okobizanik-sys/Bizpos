@@ -89,10 +89,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
 
-  // Add the role to the JWT token
   callbacks: {
     async jwt({ token, user }) {
-      // Persist the user role in the token
       if (user) {
         token.role = user.role;
         token.branchId = user.branchId;
@@ -101,7 +99,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      // Type assertion to ensure TypeScript knows the shape of the session.user
       session.user = {
         ...session.user,
         role: token.role as string,

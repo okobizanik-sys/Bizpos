@@ -28,14 +28,12 @@ export async function returnOrderUndo(
               .first();
 
             if (existingStock) {
-              // Decrease the quantity to undo the return (as stock was increased earlier)
               await trx("stocks")
                 .where({ id: existingStock.id })
                 .update({
                   quantity: existingStock.quantity - item.quantity,
                 });
             } else {
-              // If no stock entry exists, handle the error (shouldn't happen in a properly tracked sale)
               logger.error(
                 `No stock found for product ${item.productId} with barcode ${item.barcode}.`
               );
@@ -45,7 +43,6 @@ export async function returnOrderUndo(
         }
       }
 
-      // Update the order status back to 'COMPLETED' and clear the comment
       await trx("orders")
         .where({ order_id: ordersId })
         .update({ status: "COMPLETED", comment: "" });

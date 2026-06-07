@@ -40,10 +40,6 @@ export const SalesDashboard: React.FC<Props> = ({salesData}) => {
           <p className="text-sm text-[#646464]">Total COGS</p>
           <p className="text-end text-lg font-semibold">৳{totalCOGS}</p>
         </div>
-        {/* <div className="">
-          <p className="text-sm text-[#646464]">Total VAT</p>
-          <p className="text-end text-lg font-semibold">৳{totalVAT}</p>
-        </div> */}
       </div>
     </Card>
   );

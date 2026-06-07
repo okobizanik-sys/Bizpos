@@ -119,11 +119,6 @@ export function getMenuList(pathname: string): Group[] {
               label: "Product List",
               active: pathname === "/inventories/products",
             },
-            // {
-            //   href: "/inventories/add-stock",
-            //   label: "Add Stock",
-            //   active: pathname === "/inventories/add-stock",
-            // },
             {
               href: "/inventories/auto-generated-stock",
               label: "Add Stock",

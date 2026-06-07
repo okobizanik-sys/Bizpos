@@ -82,7 +82,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
     resetExchangeItemList,
   } = usePOSStore();
 
-  // console.log(exchangeItemList, "from pos form");
 
   const componentRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
@@ -142,7 +141,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
     }
   }, [order]);
 
-  // console.log("orderdata before submission:", orderData);
 
   const calculateReceivableAmount = (
     newTotal: number,
@@ -190,7 +188,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
 
       setDialogOpen(true);
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create Bill",
         description: error.message,
@@ -287,12 +284,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
               <p>Discount</p>
               <CardTitle>৳{order?.discount}</CardTitle>
             </Card>
-            {/* <Card className="opacity-50">
-              <CardHeader>
-                <p>VAT</p>
-                <CardTitle>৳{vatRate || order?.vat}</CardTitle>
-              </CardHeader>
-            </Card> */}
             <Card className="h-16 flex flex-col justify-center items-start pl-3">
               <p>Delivery</p>
               <CardTitle>৳{order?.delivery_charge}</CardTitle>
@@ -309,10 +300,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
               <p>Delivery</p>
               <CardTitle>{selectedCharge || 0}</CardTitle>
             </Card>
-            {/* <Card className="bg-[#007A12] text-white h-16 flex flex-col justify-center items-start pl-3">
-              <p>Total</p>
-              <CardTitle>৳{exgTotal}</CardTitle>
-            </Card> */}
             <Card className="bg-[#007A12] text-white h-16 flex flex-col justify-center items-start pl-3">
               <p>Receivable</p>
               <CardTitle>৳{receivableAmount}</CardTitle>
@@ -321,14 +308,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
 
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="flex flex-col justify-center items-center gap-2 ">
-              {/* <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <BadgePercent size={18} />
-                  </Button>
-                </DialogTrigger>
-                <p className="text-sm">Discount</p>
-              </Dialog> */}
             </div>
 
             <div className="flex flex-col justify-center items-center gap-2">
@@ -482,16 +461,6 @@ export const ExchangeDetailsForm: React.FC<ExchangeProps> = ({ order }) => {
         </Dialog>
       </Form>
 
-      {/* <div className="hidden">
-        <DeliverySlip
-          ref={componentRef}
-          orderData={orderData}
-          items={exchangeItemList}
-          subtotal={subtotal}
-          totalExgQty={totalExgQty}
-          total={total}
-        />
-      </div> */}
     </>
   );
 };

@@ -12,7 +12,6 @@ export async function StockReceiveAction(
   challan: Challans | undefined
 ) {
   try {
-    // console.log(challanItemList, "from receive stock action");
     await db.transaction(async (trx) => {
       if (challan) {
         const challanResponse = await updateChallanStatus(challan.id, trx);
@@ -32,7 +31,6 @@ export async function StockReceiveAction(
 
           logger.info(`Stock branch ID updated successfully! ${stock}`);
         } else {
-          // console.error("Item ID is undefined for item:", item.name);
         }
       }
     });
@@ -43,7 +41,6 @@ export async function StockReceiveAction(
     revalidatePath("/inventories/stock-history");
     return { success: true, message: "Stock receive successful!" };
   } catch (error) {
-    // console.error("Error during stock receive:", error);
     throw new Error("Stock receive failed. Please try again.");
   }
 }

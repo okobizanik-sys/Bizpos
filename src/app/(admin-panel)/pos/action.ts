@@ -29,10 +29,7 @@ export async function createBillDetails(
       const { calculateTotals } = usePOSStore.getState();
 
       calculateTotals();
-      // setOrderId();
 
-      // const { orderId } = usePOSStore.getState();
-      // console.log(orderId, "orderid from pos action");
 
       if (total === 0) {
         throw new Error(
@@ -90,7 +87,6 @@ export async function createBillDetails(
         id: lastInsertIds,
       });
       logger.info(`Items created ${orderItem}`);
-      // ✅ Update Stocks Instead of Deleting Rows
       for (const item of itemList) {
         const stocks = await trx("stocks")
           .where({
@@ -151,125 +147,23 @@ export async function createBillDetails(
   }
 }
 
-// export async function updateBillDetails(
-//   returnItemList: OrderItems[],
-//   formData: FormData,
-//   total: number,
-//   branch: Branches,
-//   exchangeItemList: OrderItems[],
-//   addExchangeItemList: OrderItems[],
-//   customerData?: CustomerData
-// ) {
-//   try {
-//     await db.transaction(async (trx) => {
-//       const customersData = {
-//         customer: formData.get("name") as string,
-//         phone: formData.get("phone") as string,
-//         address: toUpperCaseWords(String(formData.get("address"))),
-//       };
 
-//       const customerId = customerData?.customerId as number;
 
-//       const insertResult = await trx("customers")
-//         .where({ id: customerId })
-//         .update(customersData);
-//       const lastInsertId = insertResult;
 
-//       const [customer] = await trx("customers").where({ id: lastInsertId });
-//       logger.info(`Customer updated: ${customer}`);
 
-//       const { calculateExgTotals } = usePOSStore.getState();
-//       calculateExgTotals();
-//       if (!total) {
-//         throw new Error("total is 0");
-//       }
 
-//       const orderDataInput: Orders = {
-//         order_id: customerData?.orderId as string,
-//         total: total,
-//         customer_id: customerId,
-//         branch_id: Number(branch.id),
-//         status: "EXCHANGED",
-//       };
 
-//       const ordersId = customerData?.id as number;
-//       const orderId = customerData?.orderId as string;
 
-//       if (!ordersId || !orderId) {
-//         throw new Error("Order ID is required to update the order.");
-//       }
 
-//       await trx("orders").where({ id: ordersId }).update(orderDataInput);
-//       const [updatedOrder] = await trx("orders").where({ id: ordersId });
 
-//       logger.info(`Order updated: ${updatedOrder.id}`);
-//       for (const item of addExchangeItemList) {
-//         const orderEntries = Array(item.quantity).fill({
-//           order_id: BigInt(ordersId),
-//           product_id: Number(item.productId),
-//           quantity: item.quantity,
-//           price: item.sellingPrice * item.quantity,
-//           barcode: item.barcode,
-//           color_id: item.colorId,
-//           size_id: item.sizeId,
-//           created_at: new Date(),
-//           updated_at: new Date(),
-//         });
 
-//         const stockItems = await trx("stocks")
-//           .where({
-//             product_id: item.productId,
-//             branch_id: Number(branch.id),
-//             color_id: item.colorId,
-//             size_id: item.sizeId,
-//           })
-//           .limit(item.quantity);
 
-//         if (stockItems.length < item.quantity) {
-//           throw new Error("Insufficient stock");
-//         }
 
-//         const stockIdsToDelete = stockItems.map((item) => item.id);
-//         await trx("stocks").whereIn("id", stockIdsToDelete).delete();
 
-//         await trx("order_items").insert(orderEntries);
-//       }
-//       logger.info(`Order_items & stocks updated: `);
 
-//       for (const item of returnItemList) {
-//         const stockEntries = Array(item.quantity).fill({
-//           product_id: item.productId,
-//           branch_id: item.branchId,
-//           color_id: item.colorId,
-//           size_id: item.sizeId,
-//           cost: item.cost,
-//           barcode: item.barcode,
-//           created_at: new Date(),
-//           updated_at: new Date(),
-//         });
-//         const orderItemToDelete = returnItemList.map((item) => item.barcode);
 
-//         await trx("stocks").insert(stockEntries);
-//         await trx("order_items").whereIn("barcode", orderItemToDelete).delete();
-//       }
 
-//       revalidatePath("/dashboard");
-//       revalidatePath("/pos");
-//       revalidatePath("/orders/orders-list");
-//       revalidatePath("/orders/return-orders");
-//       revalidatePath("/sales/sales-list");
-//       revalidatePath("/sales/discounted-sales");
-//       revalidatePath("/customers/customers-list");
-//       revalidatePath("/customers/fraud-customers");
-//       revalidatePath("/customers/customers-data");
 
-//       return { customer };
-//     });
-//   } catch (error) {
-//     logger.error(`Error in createBillDetails: ${error}`);
-//     throw error;
-//   }
-// }
 
 export async function updateBillDetails(
   returnItemList: OrderItems[],
@@ -326,7 +220,6 @@ export async function updateBillDetails(
       const [updatedOrder] = await trx("orders").where({ id: ordersId });
       logger.info(`Order updated: ${updatedOrder.id}`);
 
-      // Handle exchanged items (reduce stock instead of deleting rows)
       for (const item of addExchangeItemList) {
         const existingStocks = await trx("stocks")
           .where({
@@ -367,7 +260,6 @@ export async function updateBillDetails(
           }
         }
 
-        // Update or insert order items
         const existingOrderItem = await trx("order_items")
           .where({
             order_id: ordersId,
@@ -377,7 +269,6 @@ export async function updateBillDetails(
           .first();
 
         if (existingOrderItem) {
-          // Update existing item quantity
           await trx("order_items")
             .where({ id: existingOrderItem.id })
             .update({
@@ -387,7 +278,6 @@ export async function updateBillDetails(
               updated_at: new Date(),
             });
         } else {
-          // Insert new item if not found
           await trx("order_items").insert({
             order_id: BigInt(ordersId),
             product_id: Number(item.productId),
@@ -402,7 +292,6 @@ export async function updateBillDetails(
         }
       }
 
-      // Handle returned items (increase stock instead of inserting new rows)
       for (const item of returnItemList) {
         const existingStock = await trx("stocks")
           .where({
@@ -412,12 +301,10 @@ export async function updateBillDetails(
           .first();
 
         if (existingStock) {
-          // Increase stock quantity
           await trx("stocks")
             .where({ id: existingStock.id })
             .update({ quantity: existingStock.quantity + item.quantity });
         } else {
-          // Insert new stock entry if it doesn’t exist
           await trx("stocks").insert({
             product_id: item.productId,
             branch_id: item.branchId,
@@ -431,7 +318,6 @@ export async function updateBillDetails(
           });
         }
 
-        // Update order items instead of deleting them
         const existingOrderItem = await trx("order_items")
           .where({
             order_id: ordersId,
@@ -442,7 +328,6 @@ export async function updateBillDetails(
 
         if (existingOrderItem) {
           if (existingOrderItem.quantity > item.quantity) {
-            // Reduce quantity instead of deleting the row
             await trx("order_items")
               .where({ id: existingOrderItem.id })
               .update({
@@ -450,7 +335,6 @@ export async function updateBillDetails(
                 updated_at: new Date(),
               });
           } else {
-            // If quantity becomes zero, delete the row
             await trx("order_items")
               .where({ id: existingOrderItem.id })
               .delete();
@@ -458,7 +342,6 @@ export async function updateBillDetails(
         }
       }
 
-      // Revalidate pages to refresh data
       revalidatePath("/dashboard");
       revalidatePath("/pos");
       revalidatePath("/orders/orders-list");

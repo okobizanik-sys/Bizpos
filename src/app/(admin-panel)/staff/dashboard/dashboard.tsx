@@ -71,7 +71,6 @@ export default function StaffDashboard({ salesData }: SalesDashboardProps) {
     calculateSalesTotals(salesData);
   }, [salesData, calculateSalesTotals]);
 
-  // console.log(branches, "salesdata from dashboard");
   return (
     <div>
       <div className="flex gap-2 justify-end items-center mt-1 mr-4">

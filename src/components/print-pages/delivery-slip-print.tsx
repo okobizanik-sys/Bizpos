@@ -28,14 +28,7 @@ const PrintDeliverySlip = React.forwardRef<
     setLogoLoadFailed(false);
   }, [logoSrc]);
 
-  // const [settingsData, setSettingsData] = useState<Settings>();
-  // console.log(settingsData, "from delivery slip@@@@@@@@@@@@@@");
 
-  // useEffect(() => {
-  //   getSetting()
-  //     .then((data) => setSettingsData(data))
-  //     .catch((error) => console.log(error));
-  // }, []);
 
   return (
     <div ref={ref} className="w-[4in] h-[6in] mx-auto text-xs flex flex-col">
@@ -56,16 +49,11 @@ const PrintDeliverySlip = React.forwardRef<
             )}
           </div>
           <div className="text-sm p-1 w-3/4">
-            {/* <p>{existingBranch.name}</p> */}
             <p>
               {existingBranch.address}
               {"         "}
               Ph: {existingBranch.phone}
             </p>
-            {/* <p className="">
-              <span className="font-semibold">Hotline:</span>{" "}
-              {existingBranch.phone}
-            </p> */}
           </div>
         </div>
 
@@ -83,7 +71,6 @@ const PrintDeliverySlip = React.forwardRef<
               {orderItem.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center">
                   <p>{`${item.barcode} - ${item.productName} - ${item.colorName} - ${item.sizeName}`}</p>
-                  {/* <h1 className="font-semibold">{item.sellingPrice}</h1> */}
                 </div>
               ))}
             </div>
@@ -113,7 +100,6 @@ const PrintDeliverySlip = React.forwardRef<
         <div className="p-1">
           <p>
             <span className="font-semibold">Return & Exchange:</span>{" "}
-            {/* {settingsData?.return_privacy_policy || ""} */}
             <span
               dangerouslySetInnerHTML={{
                 __html: String(settingsData?.return_privacy_policy),

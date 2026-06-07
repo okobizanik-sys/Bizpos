@@ -38,7 +38,6 @@ export default async function StockHistoryPage({ searchParams }: Props) {
   const histories = await getStockHistories({
     where: { created_at: whereBlock.where.created_at },
   });
-  // console.log(histories);
 
   return (
     <ContentLayout title="Stock History">

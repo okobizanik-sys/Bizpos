@@ -19,7 +19,6 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // console.log(nextUrl.origin)
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET!,
@@ -34,11 +33,9 @@ export default async function middleware(request: NextRequest) {
   const userRole = token?.role;
   const userBranchId =
     token?.branchId || request.cookies.get("branch_id")?.value;
-  // console.log(token, "token from middleware", userRole);
 
   const response = NextResponse.next();
 
-  // Set branch ID in cookies if it exists
   if (userBranchId && typeof userBranchId === "string") {
     response.cookies.set("branch_id", userBranchId, {
       path: "/",
@@ -47,19 +44,16 @@ export default async function middleware(request: NextRequest) {
     });
   }
 
-  // Redirect unauthenticated users to login page
   if (!isAuthenticated) {
     return NextResponse.redirect(new URL("/", nextUrl.origin));
   }
 
-  // Redirect authenticated users accessing "/dashboard" to their respective dashboards
   if (pathname === "/dashboard") {
     const dashboardRoute =
       userRole === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
     return NextResponse.redirect(new URL(dashboardRoute, nextUrl.origin));
   }
 
-  // Restrict admin-specific routes
   const adminRoutes = ["/admin", "/sales", "/staffs", "/settings"];
   if (adminRoutes.some((route) => pathname.startsWith(route))) {
     if (userRole !== "ADMIN") {
@@ -67,12 +61,7 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // Restrict staff-specific routes
-  // if (nextUrl.pathname.startsWith("/staff") && userRole !== "STAFF") {
-  //   return NextResponse.redirect(new URL("/", nextUrl.origin));
-  // }
 
-  // Enforce default pagination for product inventories
   if (
     pathname === "/inventories/products" &&
     !nextUrl.searchParams.get("page")
@@ -91,7 +80,6 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(
       new URL(
         `/orders/orders-list?page=1&per_page=10&sort=id%3Adesc`,
-        // `/orders/orders-list?branch_id=${userBranchId}&page=1&per_page=10&sort=id%3Adesc`,
         nextUrl.origin
       )
     );
@@ -100,13 +88,6 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -70,7 +70,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
     });
   }, [loading]);
 
-  // console.log(settings);
 
   const form = useForm<z.infer<typeof settingsFormSchema>>({
     resolver: zodResolver(settingsFormSchema),
@@ -88,7 +87,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
       const logoUrl = URL.createObjectURL(logoFile);
       setSelectedLogo(logoUrl);
 
-      // Cleanup URL after file is cleared or component unmounts
       return () => URL.revokeObjectURL(logoUrl);
     }
   }, [form.watch("logo_image")]);
@@ -99,7 +97,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
       const loginImageUrl = URL.createObjectURL(loginImageFile);
       setSelectedLoginImage(loginImageUrl);
 
-      // Cleanup URL after file is cleared or component unmounts
       return () => URL.revokeObjectURL(loginImageUrl);
     }
   }, [form.watch("login_image")]);
@@ -107,8 +104,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
   const onSubmit = async (values: z.infer<typeof settingsFormSchema>) => {
     setLoading(true);
     const formData = makeFormData(values);
-    // console.log(formData, "from form");
-    // console.log(values, "values from form");
     try {
       const result = await SettingsFormAction(formData);
       if (result.success) {
@@ -123,7 +118,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
         setSheetOpen((prev) => !prev);
       }
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create settings",
         description: error.message,
@@ -140,7 +134,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
       <SheetTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
           <span className="sr-only">Open menu</span>
-          {/* <MoreHorizontal className="h-4 w-4" /> */}
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -155,7 +148,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="mb-4 grid grid-cols-1 items-center gap-2 md:grid-cols-2">
-                {/* Login image upload */}
                 <div className="w-full h-full">
                   <Label>
                     Login Page Image (1600px * 800px){" "}
@@ -205,7 +197,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                   />
                 </div>
 
-                {/* Logo upload */}
                 <div className="w-full h-full">
                   <Label>
                     Logo Upload (150px * 40px) <b className="text-red-500">*</b>
@@ -263,10 +254,6 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                     <FormItem className="col-span-3">
                       <FormLabel>Return Policy</FormLabel>
                       <FormControl>
-                        {/* <Input
-                          placeholder="Enter settings return & exchange policy"
-                          {...field}
-                        /> */}
                         <ReactQuill {...field} />
                       </FormControl>
                       <FormDescription className="text-red-400 text-xs min-h-4">

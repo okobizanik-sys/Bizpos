@@ -140,7 +140,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
     content: () => printerRef.current,
   });
 
-  // onReady callback from PrintInvoice — fires when logo canvas is ready
   const handleInvoiceReady = React.useCallback(() => {
     setShouldPrintInvoice((current) => {
       if (current) {
@@ -166,11 +165,8 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
         }
 
         if (printInvoice) {
-          // Instead of calling handleInvoicePrinter directly,
-          // set flag — onReady will fire the print when logo is ready
           setShouldPrintInvoice(true);
           setPrintInvoice(false);
-          // Fallback: if onReady doesn't fire (logo already loaded), print after delay
           setTimeout(() => {
             setShouldPrintInvoice((current) => {
               if (current) {
@@ -310,7 +306,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delivery Slip */}
       <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         <DeliverySlip
           ref={componentRef}
@@ -322,7 +317,6 @@ export const AdvancedPaymentForm: React.FC<Props> = ({
         />
       </div>
 
-      {/* Print Invoice */}
       <div style={{ position: "absolute", left: "-9999px", top: 0, visibility: "hidden" }}>
         {order && (
           <PrintInvoice

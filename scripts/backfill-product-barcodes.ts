@@ -1,9 +1,3 @@
-/**
- * One-time backfill script: assigns barcodes to all products that don't have one yet.
- *
- * Run with:
- *   npx ts-node scripts/backfill-product-barcodes.ts
- */
 
 import knex, { Knex } from "knex";
 import dotenv from "dotenv";
@@ -48,7 +42,6 @@ const db = knex({
 async function main() {
   console.log("Starting barcode backfill...");
 
-  // Fetch all products without a barcode, ordered by id ascending
   const products = await db("products")
     .whereNull("barcode")
     .orderBy("id", "asc")

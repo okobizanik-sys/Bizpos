@@ -108,17 +108,12 @@ export const BillDetailsForm: React.FC = () => {
   const [saleChannel, setSaleChannel] = React.useState<"ONLINE" | "OFFLINE">(
     "OFFLINE"
   );
-  // console.log(customerData, "customer data from pos form");
 
   const handleDeliveryChargeChange = (charge: number) => {
     setSelectedCharge(charge);
     setDeliveryCharge(charge);
   };
 
-  // const handleDiscountChange = (charge: number) => {
-  //   setSelectedDiscount(charge);
-  //   setDiscountAmount(charge);
-  // };
   const handleDiscountChange = (charge: number) => {
     setSelectedDiscount((prev) => (prev === charge ? 0 : charge));
     setDiscountAmount(charge);
@@ -215,7 +210,6 @@ export const BillDetailsForm: React.FC = () => {
 
       form.reset();
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create Bill",
         description: error.message,

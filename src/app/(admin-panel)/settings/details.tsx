@@ -136,7 +136,6 @@ export function SettingDetailSheet({ setting }: Props) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-2">
-              {/* Login image upload */}
               <div className="w-full h-full">
                 <Label>
                   Login Page Image (1600px * 80px){" "}
@@ -145,7 +144,6 @@ export function SettingDetailSheet({ setting }: Props) {
                 {selectedLoginImage ? (
                   <Image
                     src={selectedLoginImage}
-                    // src={fileUrlGenerator(selectedLoginImage)}
                     alt={selectedLoginImage}
                     height={350}
                     width={350}
@@ -189,7 +187,6 @@ export function SettingDetailSheet({ setting }: Props) {
                 />
               </div>
 
-              {/* Logo upload */}
               <div className="w-full h-full">
                 <Label>
                   Logo Upload (150px * 40px) <b className="text-red-500">*</b>
@@ -197,7 +194,6 @@ export function SettingDetailSheet({ setting }: Props) {
                 {selectedLogo ? (
                   <Image
                     src={selectedLogo}
-                    // src={fileUrlGenerator(selectedLogo)}
                     alt={selectedLogo}
                     height={350}
                     width={350}

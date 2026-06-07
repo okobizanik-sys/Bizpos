@@ -104,24 +104,13 @@ export function makePrice(price: string | number) {
 export function makeBDPrice(price: string | number) {
   const amount = typeof price === "string" ? parseFloat(price) : price;
 
-  // Format according to the Bangladeshi numbering system
   const formatted = amount.toLocaleString("en-IN", {
-    // style: "currency",
-    // currency: "BDT",
     minimumFractionDigits: 0,
   });
 
   return `৳ ${formatted}`;
 }
 
-// export function getTotalFromTable<T>(table: Table<T>, index: number) {
-//   return table
-//     .getRowModel()
-//     .rows.map(
-//       (row) => row.getAllCells().map((cell) => Number(cell.getValue()))[index]
-//     )
-//     .reduce((acc, cur) => acc + cur, 0);
-// }
 
 export function getTotalFromTable<T>(table: Table<T>, index: number) {
   return table
@@ -129,7 +118,6 @@ export function getTotalFromTable<T>(table: Table<T>, index: number) {
     .rows.map((row) => {
       const product = row.original as ProductWithStockPayload;
 
-      // Ensure the correct index is used for calculations
       if (index === 7) {
         return product.cost * product.quantity; // Stock Value
       } else if (index === 8) {

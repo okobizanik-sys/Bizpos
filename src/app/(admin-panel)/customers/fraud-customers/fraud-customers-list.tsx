@@ -57,7 +57,6 @@ export default function FraudCustomersList() {
     content: () => printerRef.current,
   });
 
-  // console.log(customer, "customer from fraud product page");
 
   React.useEffect(() => {
     if (branch) {
@@ -128,7 +127,6 @@ export default function FraudCustomersList() {
     const notFraudCustomer = fraudCustomers.find(
       (item) => item.id === Number(customerId)
     );
-    // console.log(found)
     if (
       await confirmation(
         "Are you sure you want to remove this customer from fraud list?"
@@ -186,7 +184,6 @@ export default function FraudCustomersList() {
                 <TableHead className="h-8 text-white">Customer</TableHead>
                 <TableHead className="h-8 text-white">Phone</TableHead>
                 <TableHead className="h-8 text-white">Remarks</TableHead>
-                {/* <TableHead className="h-8 text-white">Action</TableHead> */}
               </TableRow>
             </TableHeader>
 
@@ -197,7 +194,6 @@ export default function FraudCustomersList() {
                   <TableCell className="py-2">{item.customer}</TableCell>
                   <TableCell className="py-2">{item.phone}</TableCell>
                   <TableCell className="py-2">{item.remarks}</TableCell>
-                  {/* <TableCell className="py-2">{}</TableCell> */}
                 </TableRow>
               ))}
             </TableBody>

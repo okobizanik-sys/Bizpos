@@ -53,7 +53,6 @@ export const CustomerDetailsSheet: React.FC<Props> = ({ customer }) => {
   const [openAddGroup, setOpenAddGroup] = React.useState(false);
   const [openAddMembership, setOpenAddMembership] = React.useState(false);
 
-  // Fetch groups and memberships after component mounts
   React.useEffect(() => {
     async function fetchData() {
       try {
@@ -64,7 +63,6 @@ export const CustomerDetailsSheet: React.FC<Props> = ({ customer }) => {
         setGroups(groupsData);
         setMemberships(membershipsData);
       } catch (error) {
-        // console.error("Failed to fetch data:", error);
       }
     }
     fetchData();
@@ -284,7 +282,6 @@ export const CustomerDetailsSheet: React.FC<Props> = ({ customer }) => {
                 variant="destructive"
                 onClick={handleDeleteClick}
                 loading={deleting}
-                // disabled={customer.root}
               >
                 Delete
               </Button>

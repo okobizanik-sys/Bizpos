@@ -42,7 +42,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       getInventoryAlertSummary(),
     ]);
 
-  // console.log(salesSummary, "sales summary from dashboard");
 
   return (
     <>

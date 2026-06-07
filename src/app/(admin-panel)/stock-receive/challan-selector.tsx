@@ -52,8 +52,6 @@ export const ChallanSelector: React.FC<Props> = ({
               <span>{id}</span>
             </span>
             <span className="text-xs text-muted-foreground">
-              {/* ID: {productId.toString()}, SKU: {sku}, Variant: {colorName} -{" "}
-                {sizeName}, Stocks:{} */}
             </span>
           </ComboboxItem>
         ))}

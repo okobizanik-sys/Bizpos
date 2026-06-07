@@ -28,21 +28,6 @@ export type ProductList = {
 };
 
 export const columns: ColumnDef<ProductList>[] = [
-  // {
-  //   header: ({ column }) => {
-  //     return (
-  //       <Button
-  //         variant="ghost"
-  //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-  //       >
-  //         ID
-  //         <ArrowUpDown className="ml-2 h-4 w-4" />
-  //       </Button>
-  //     );
-  //   },
-  //   accessorKey: "id",
-  //   cell: ({ row }: { row: any }) => makeProductCode(row.getValue("id")),
-  // },
   {
     header: "SL",
     cell: ({ row }) => row.index + 1,
@@ -55,7 +40,6 @@ export const columns: ColumnDef<ProductList>[] = [
         {row.original.imageUrl ? (
           <img
             src={row.getValue("imageUrl")}
-            // src={fileUrlGenerator(image_url)}
             alt={row.getValue("name")}
             height={48}
             width={48}
@@ -97,10 +81,6 @@ export const columns: ColumnDef<ProductList>[] = [
   {
     header: "Selling Price",
     accessorKey: "selling_price",
-    // cell: ({ row }) => {
-    //   const formatted = row.getValue("selling_price");
-    //   return <div className="font-medium">{String(formatted)}</div>;
-    // },
   },
   {
     header: "Actions",

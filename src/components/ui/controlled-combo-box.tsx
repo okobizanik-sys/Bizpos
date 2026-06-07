@@ -120,7 +120,6 @@ export const ControlledCombobox = ({
         case stateChangeTypes.InputClick:
         case stateChangeTypes.InputKeyDownEnter:
         case stateChangeTypes.InputKeyDownEscape: {
-          // Allow custom input if no item is selected
           if (!prev.selectedItem) {
             return {
               ...changes,

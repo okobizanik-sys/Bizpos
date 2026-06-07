@@ -25,7 +25,6 @@ export function BarcodeLabel({
   return (
     <div className="label-wrapper">
       <div className="label">
-        {/* Show logo image if provided, otherwise fall back to text */}
         {logoUrl ? (
           <img
             src={logoUrl}

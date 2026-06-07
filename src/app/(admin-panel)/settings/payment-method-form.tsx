@@ -65,7 +65,6 @@ export const PaymentMethodsForm: React.FC = () => {
         form.reset();
       }
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to create payment Methods",
         description: error.message,
@@ -87,7 +86,6 @@ export const PaymentMethodsForm: React.FC = () => {
         setPaymentMethods(paymentMethods.filter((pm) => pm.id !== id));
       }
     } catch (error: any) {
-      // console.error(error);
       toast({
         title: "Failed to delete payment Methods",
         description: error.message,
@@ -103,7 +101,6 @@ export const PaymentMethodsForm: React.FC = () => {
           <Label className="text-lg font-bold">Payment Methods</Label>
           <Button
             variant="outline"
-            // size="icon"
             className="border-2 border-green-400 text-green-400"
             onClick={() => setSheetOpen((prev) => !prev)}
           >
@@ -136,7 +133,6 @@ export const PaymentMethodsForm: React.FC = () => {
         <SheetTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
             <span className="sr-only">Open menu</span>
-            {/* <MoreHorizontal className="h-4 w-4" /> */}
           </Button>
         </SheetTrigger>
         <SheetContent

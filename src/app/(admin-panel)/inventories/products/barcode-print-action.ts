@@ -12,11 +12,6 @@ export interface StockForPrint {
   selling_price: number;
 }
 
-/**
- * Returns every distinct stock entry (stocks.barcode) with product info.
- * This is the single source of truth for barcodes — the same barcode used
- * in POS, orders, stock transfers, and challan.
- */
 export async function getStocksForPrint(): Promise<StockForPrint[]> {
   const rows = await db("stocks")
     .where("stocks.condition", "new")

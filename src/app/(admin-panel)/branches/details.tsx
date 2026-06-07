@@ -43,7 +43,6 @@ export const BranchDetailsSheet: React.FC<Props> = ({ branch }) => {
     address: z.string(),
     phone: z.string(),
   });
-  // console.log(branch, "branch from colum detail");
   const form = useForm<z.infer<typeof branchFormSchema>>({
     resolver: zodResolver(branchFormSchema),
     defaultValues: {

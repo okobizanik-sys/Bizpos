@@ -148,7 +148,6 @@ export const POSItemSelector: React.FC = () => {
         console.error("Failed to load POS stocks:", error);
       });
 
-    // Reset exchange data when branch changes and lazy-load orders only when exchange opens
     setOrders(null);
     setExgOrder(undefined);
     resetExchangeItemList();
@@ -178,12 +177,10 @@ export const POSItemSelector: React.FC = () => {
       });
   }, [branch?.id, exchangeOpen, orders, loadingOrders]);
 
-  // console.log("itemList from pos items selector:", itemList);
 
   const { toast } = useToast();
 
   const barcodeSelected = async (code: string | null | void) => {
-    // console.log("barcode selected........");
     if (code) {
       if (!branch?.id) {
         toast({
@@ -220,11 +217,8 @@ export const POSItemSelector: React.FC = () => {
           cost: stock.cost,
         });
         playBeep(true);
-        // setSelectedQty(0);
-        // setQtyModalOpen(false);
         await setOrderId();
       } else {
-        // Barcode not found in this branch's stock
         playBeep(false);
         toast({
           title: "Barcode not found",
@@ -258,7 +252,6 @@ export const POSItemSelector: React.FC = () => {
         .catch((error) => {
           console.error("Failed to fetch exchange stock count:", error);
         });
-      // setExgQtyModalOpen(true);
 
       const stock = stocks.find((stock) => stock.barcode === code);
       if (stock) {
@@ -267,7 +260,6 @@ export const POSItemSelector: React.FC = () => {
           productName: stock.name,
           sellingPrice: stock.selling_price,
           quantity: 1,
-          // quantity: selectedQty,
           colorName: stock.colorName,
           sizeName: stock.sizeName,
           barcode: stock.barcode,
@@ -275,8 +267,6 @@ export const POSItemSelector: React.FC = () => {
           sizeId: stock.size_id,
         });
         playBeep(true);
-        // setSelectedQty(0);
-        // setExgQtyModalOpen(false);
       } else {
         playBeep(false);
         toast({
@@ -289,26 +279,6 @@ export const POSItemSelector: React.FC = () => {
     }
   };
 
-  // const addStockToExchangeItemList = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   const stock = stocks.find((stock) => stock.barcode === selectedBarcode);
-  //   if (stock) {
-  //     addItemToExchange({
-  //       productId: Number(stock.productId),
-  //       productName: stock.name,
-  //       sellingPrice: stock.selling_price,
-  //       quantity: 1,
-  //       // quantity: selectedQty,
-  //       colorName: stock.colorName,
-  //       sizeName: stock.sizeName,
-  //       barcode: stock.barcode,
-  //       colorId: stock.color_id,
-  //       sizeId: stock.size_id,
-  //     });
-  //     setSelectedQty(0);
-  //     setExgQtyModalOpen(false);
-  //   }
-  // };
 
   const setSelectedOrder = (id: string | null | void) => {
     const foundOrder = orders?.find((order) => order.orderId === id);
@@ -321,9 +291,6 @@ export const POSItemSelector: React.FC = () => {
     }
   };
 
-  // Hardware barcode scanner — fires when a physical scanner types fast + Enter
-  // In POS mode  → calls barcodeSelected  (adds to cart)
-  // In Exchange mode → calls barcodeExchangeSelected (adds to exchange list)
   useBarcodeScanner({
     onScan: exchangeOpen ? barcodeExchangeSelected : barcodeSelected,
   });
@@ -332,7 +299,6 @@ export const POSItemSelector: React.FC = () => {
     <>
       <div className="grid grid-cols-12">
         <div className="col-span-9">
-          {/* Left panel */}
           <div className="flex flex-col">
             <Card className="flex justify-between items-end p-4 m-2 rounded-lg">
               {exchangeOpen ? (
@@ -369,22 +335,16 @@ export const POSItemSelector: React.FC = () => {
                     </span>
                   )}
                 </Button>
-                {/* <Button className="flex gap-1 items-center bg-[#D1FFCA] hover:bg-[#bcf9b3] text-black/90">
-                  <PlusCircle /> <span>Non Inventory (F6)</span>
-                </Button> */}
               </div>
             </Card>
           </div>
 
-          {/* Exchange */}
           {exchangeOpen ? (
             <div>
-              {/* Order Details */}
               <Card className=" p-4 m-2 mt-0 rounded-lg min-h-[calc(100vh-500px)] overflow-scroll no-scrollbar">
                 <Table className="rounded-lg overflow-hidden">
                   <TableHeader className="bg-primary">
                     <TableRow>
-                      {/* <TableHead className="h-8 text-white">#</TableHead> */}
                       <TableHead className="h-8 text-white">Barcode</TableHead>
                       <TableHead className="h-8 text-white">
                         Product Name
@@ -430,7 +390,6 @@ export const POSItemSelector: React.FC = () => {
                 </Table>
               </Card>
 
-              {/* Select Product */}
               <Card className=" p-4 m-2 rounded-lg overflow-scroll no-scrollbar">
                 <div className="w-1/2 relative mb-4">
                   <Label>Select Product</Label>
@@ -445,7 +404,6 @@ export const POSItemSelector: React.FC = () => {
                 <Table className="rounded-lg overflow-hidden">
                   <TableHeader className="bg-primary">
                     <TableRow>
-                      {/* <TableHead className="h-8 text-white">#</TableHead> */}
                       <TableHead className="h-8 text-white">Barcode</TableHead>
                       <TableHead className="h-8 text-white">
                         Product Name
@@ -464,7 +422,6 @@ export const POSItemSelector: React.FC = () => {
                   <TableBody>
                     {addExchangeItemList.map((item, index) => (
                       <TableRow key={item.barcode}>
-                        {/* <TableCell className="py-2">{index + 1}</TableCell> */}
                         <TableCell className="py-2">{item.barcode}</TableCell>
                         <TableCell className="py-2 w-60">
                           {item.productName}
@@ -476,7 +433,6 @@ export const POSItemSelector: React.FC = () => {
                         </TableCell>
                         <TableCell className="py-2 w-20 flex gap-2 items-center">
                           <Input
-                            // className="w-12"
                             type="number"
                             max={exgQtyLimit}
                             min={1}
@@ -508,13 +464,11 @@ export const POSItemSelector: React.FC = () => {
                 </Table>
               </Card>
 
-              {/* Return Product */}
               <Card className=" p-4 m-2 rounded-lg overflow-scroll no-scrollbar">
                 <h2>Return Items</h2>
                 <Table className="rounded-lg overflow-hidden">
                   <TableHeader className="bg-primary">
                     <TableRow>
-                      {/* <TableHead className="h-8 text-white">#</TableHead> */}
                       <TableHead className="h-8 text-white">Barcode</TableHead>
                       <TableHead className="h-8 text-white">
                         Product Name
@@ -533,7 +487,6 @@ export const POSItemSelector: React.FC = () => {
                   <TableBody>
                     {returnItemList.map((item, index) => (
                       <TableRow key={index}>
-                        {/* <TableCell className="py-2">{index + 1}</TableCell> */}
                         <TableCell className="py-2">{item.barcode}</TableCell>
                         <TableCell className="py-2 w-60">
                           {item.productName}
@@ -545,7 +498,6 @@ export const POSItemSelector: React.FC = () => {
                         </TableCell>
                         <TableCell className="py-2 w-20 flex gap-2 items-center">
                           <Input
-                            // className="w-12"
                             type="number"
                             max={exgQtyLimit}
                             min={1}
@@ -583,7 +535,6 @@ export const POSItemSelector: React.FC = () => {
                 <Table className="rounded-lg overflow-hidden">
                   <TableHeader className="bg-primary">
                     <TableRow>
-                      {/* <TableHead className="h-8 text-white">SL</TableHead> */}
                       <TableHead className="h-8 w-1/12 text-white">
                         Barcode
                       </TableHead>
@@ -612,7 +563,6 @@ export const POSItemSelector: React.FC = () => {
                   <TableBody>
                     {itemList.map((item, index) => (
                       <TableRow key={item.barcode}>
-                        {/* <TableCell className="py-2">{index + 1}</TableCell> */}
                         <TableCell className="py-2">{item.barcode}</TableCell>
                         <TableCell className="py-2 w-60">{item.name}</TableCell>
                         <TableCell className="py-2">{item.colorName}</TableCell>
@@ -656,7 +606,6 @@ export const POSItemSelector: React.FC = () => {
           )}
         </div>
 
-        {/* Right panel */}
         {exchangeOpen ? (
           <Card className="col-span-3 p-4 m-2 ml-0 rounded-lg">
             <ExchangeDetailsForm order={exgOrder} />
@@ -674,51 +623,7 @@ export const POSItemSelector: React.FC = () => {
         )}
       </div>
 
-      {/* Dialogue box */}
-      {/* <Dialog open={qtyModalOpen} onOpenChange={setQtyModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Quantity (In Stock: {qtyLimit})</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={addStockToItemList} className="flex gap-2">
-            <Input
-              className="w-[200px]"
-              type="number"
-              max={qtyLimit}
-              min={1}
-              value={selectedQty}
-              required
-              onChange={(e) => setSelectedQty(parseInt(e.target.value))}
-            />
-            <Button className="flex-1" type="submit">
-              Add
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog> */}
 
-      {/* Exchange Dialogue box */}
-      {/* <Dialog open={exgQtyModalOpen} onOpenChange={setExgQtyModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Quantity (In Stock: {exgQtyLimit})</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={addStockToExchangeItemList} className="flex gap-2">
-            <Input
-              className="w-[200px]"
-              type="number"
-              max={exgQtyLimit}
-              min={1}
-              value={selectedQty}
-              required
-              onChange={(e) => setSelectedQty(parseInt(e.target.value))}
-            />
-            <Button className="flex-1" type="submit">
-              Add
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog> */}
     </>
   );
 };

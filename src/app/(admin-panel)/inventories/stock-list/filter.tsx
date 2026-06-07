@@ -18,8 +18,6 @@ import { StockFilter } from "./page";
 
 const defaultValues = {
   search: "",
-  //   category: "",
-  //   branch: "",
 };
 
 interface FilterStockFormProps {

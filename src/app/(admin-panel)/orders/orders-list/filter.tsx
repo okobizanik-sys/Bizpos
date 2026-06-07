@@ -119,7 +119,6 @@ export const FilterOrderForm: React.FC<FilterOrderFormProps> = ({
                       <SelectItem value="ALL">All</SelectItem>
                       <SelectItem value="COMPLETED">Completed</SelectItem>
                       <SelectItem value="EXCHANGED">Exchanged</SelectItem>
-                      {/* <SelectItem value="RETURN">Returned</SelectItem> */}
                     </SelectContent>
                   </Select>
                 )}

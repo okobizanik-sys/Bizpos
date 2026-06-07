@@ -44,7 +44,6 @@ const ReportPage = React.forwardRef<HTMLDivElement, ReportPageProps>(
   ) => {
     const totalProfit = totalSales - totalCOGS;
 
-    // Define columns
     const columns = useMemo<ColumnDef<any>[]>(
       () => [
         { accessorKey: "name", header: "Branch" },
@@ -63,7 +62,6 @@ const ReportPage = React.forwardRef<HTMLDivElement, ReportPageProps>(
       []
     );
 
-    // Prepare data for table
     const tableData = branches.map((branch) => ({
       name: branch.name,
       sales: branchWiseTotals[Number(branch.id)]?.totalSales || 0,
@@ -83,9 +81,7 @@ const ReportPage = React.forwardRef<HTMLDivElement, ReportPageProps>(
           <h2 className="text-xl font-bold text-center mb-4">
             Sales & Inventory Report
           </h2>
-          {/* <p>{show}</p> */}
 
-          {/* Summary Table */}
           <table className="w-full border-collapse border border-gray-300 mb-6">
             <tbody>
               <tr>
@@ -127,7 +123,6 @@ const ReportPage = React.forwardRef<HTMLDivElement, ReportPageProps>(
             </tbody>
           </table>
 
-          {/* Branch-wise Breakdown Table */}
           <h3 className="text-lg font-bold mb-2">Branch-wise Breakdown</h3>
           <table className="w-full border-collapse border border-gray-300">
             <thead>

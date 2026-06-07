@@ -36,7 +36,6 @@ interface Props {
 export const SalesTable: React.FC<Props> = ({ data }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
-  // console.log(data, "sales data from sale");
 
   const router = useRouter();
   const pathname = usePathname();
@@ -81,7 +80,6 @@ export const SalesTable: React.FC<Props> = ({ data }) => {
   const table = useReactTable({
     data,
     columns,
-    // pageCount: pageCount ?? -1,
     state: {
       pagination,
     },

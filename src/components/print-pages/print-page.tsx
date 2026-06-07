@@ -16,7 +16,6 @@ interface Props {
 
 const excludedColumns = ["SL", "Action"];
 
-// Filter the headers to exclude specific columns
 const getFilteredHeaders = (
   headers: Header<any, any>[]
 ): { name: string; index: number }[] => {
@@ -26,7 +25,6 @@ const getFilteredHeaders = (
     .filter((header) => !excludedColumns.includes(header.name));
 };
 
-// Filter rows based on the filtered headers
 const getFilteredRows = (
   rows: Row<any>[],
   filteredHeaders: { name: string; index: number }[]
@@ -39,7 +37,6 @@ const getFilteredRows = (
   });
 };
 
-// Extract branch details
 const getBranch = (branch: Branches) => {
   return {
     name: branch.name,
@@ -58,10 +55,6 @@ export class PrintPageComponet extends React.Component<Props> {
     logoUrl: "",
   };
 
-  // async componentDidMount() {
-  //   const settings = await getSetting();
-  //   this.setState({ logoUrl: fileUrlGenerator(settings.logo_image_url || "") });
-  // }
 
   static getDerivedStateFromProps(nextProps: Props, prevState: any) {
     const filteredHeaders = getFilteredHeaders(nextProps.headers);
@@ -110,7 +103,6 @@ export class PrintPageComponet extends React.Component<Props> {
 
     return (
       <div className="w-screen mx-auto p-6 text-xs">
-        {/* Header Section */}
         <div className="w-full border-b border-gray-700 p-2 flex items-center justify-between">
           <div className="w-1/5">
             <p className="w-full flex justify-start items-center text-3xl font-bold">
@@ -127,7 +119,6 @@ export class PrintPageComponet extends React.Component<Props> {
           </div>
         </div>
 
-        {/* Table Section */}
         <table className="mt-4 rounded-lg w-full">
           <thead className="bg-primary text-primary-foreground">
             <tr>

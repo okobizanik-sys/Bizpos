@@ -4,60 +4,13 @@ import db from "@/db/database";
 import { logger } from "../lib/winston";
 import { ProductFilter } from "@/app/(admin-panel)/inventories/products/page";
 
-// Get products with optional parameters
-// export async function getProducts(params: {
-//   skip?: number;
-//   take?: number;
-//   orderBy?: { [key: string]: "asc" | "desc" }[];
-//   where?: ProductFilter;
-// }) {
-//   const { filter_global, filter } = params.where || {};
 
-//   const query = db("products")
-//     .select(
-//       "products.*",
-//       "categories.name as categoryName",
-//       "brands.name as brandName",
-//       "images.url as imageUrl"
-//     )
-//     .leftJoin("categories", "products.category_id", "categories.id")
-//     .leftJoin("brands", "products.brand_id", "brands.id")
-//     .leftJoin("images", "products.image_id", "images.id")
-//     .orderBy("created_at", "desc");
 
-//   if (filter_global) {
-//     query.where(function () {
-//       this.where("products.id", "LIKE", `%${filter_global}%`)
-//         .orWhere("products.name", "LIKE", `%${filter_global}%`)
-//         .orWhere("products.sku", "LIKE", `%${filter_global}%`);
-//     });
-//   }
 
-//   if (filter) {
-//     query.andWhere("categories.name", filter);
-//   }
 
-//   // Apply ordering if present
-//   if (params.orderBy) {
-//     params.orderBy.forEach((order) => {
-//       Object.entries(order).forEach(([key, value]) => {
-//         query.orderBy(key, value);
-//       });
-//     });
-//   }
 
-//   // Apply pagination if present
-//   if (params.skip) {
-//     query.offset(params.skip);
-//   }
 
-//   if (params.take) {
-//     query.limit(params.take);
-//   }
 
-//   const products = await query;
-//   return products;
-// }
 
 export async function getProducts(params: {
   skip?: number;
@@ -67,7 +20,6 @@ export async function getProducts(params: {
 }) {
   const { filter_global, filter } = params.where || {};
 
-  // Base query for products
   const query = db("products")
     .select(
       "products.*",
@@ -80,7 +32,6 @@ export async function getProducts(params: {
     .leftJoin("images", "products.image_id", "images.id")
     .orderBy("products.created_at", "desc");
 
-  // Apply filters
   if (filter_global) {
     query.where(function () {
       this.where("products.id", "LIKE", `%${filter_global}%`)
@@ -93,7 +44,6 @@ export async function getProducts(params: {
     query.andWhere("categories.name", filter);
   }
 
-  // Apply ordering if present
   if (params.orderBy) {
     params.orderBy.forEach((order) => {
       Object.entries(order).forEach(([key, value]) => {
@@ -102,7 +52,6 @@ export async function getProducts(params: {
     });
   }
 
-  // Clone the query to use for counting
   const countQuery = db("products")
     .count("* as total")
     .leftJoin("categories", "products.category_id", "categories.id");
@@ -119,10 +68,8 @@ export async function getProducts(params: {
     countQuery.andWhere("categories.name", filter);
   }
 
-  // Fetch total count
   const [{ total }] = await countQuery;
 
-  // Apply pagination
   if (params.skip) {
     query.offset(params.skip);
   }
@@ -131,13 +78,11 @@ export async function getProducts(params: {
     query.limit(params.take);
   }
 
-  // Fetch products
   const products = await query;
 
   return { products, total: Number(total) };
 }
 
-// db.raw("COUNT(stocks.barcode) as stockQuantity")
 export async function getProduct(params: any) {
   const query = db("products")
     .select(
@@ -149,7 +94,6 @@ export async function getProduct(params: any) {
       "stocks.condition",
       "stocks.product_id",
       "stocks.quantity",
-      // db.raw("COUNT(stocks.id) OVER() as quantity"),
       "sizes.name as sizeName",
       "colors.name as colorName",
       "branches.name as branchName"
@@ -225,7 +169,6 @@ export async function getSelectedProduct(params: any) {
     ...rows[0],
     stocks: rows.map((row) => ({
       barcode: row.barcode,
-      // quantity: row.quantity,
       size: { name: row.sizeName },
       color: { name: row.colorName },
       branch: { name: row.branchName },

@@ -3,7 +3,6 @@ import { ProductWithStockPayload } from "./page";
 import { makePrice, makeProductCode } from "@/utils/helpers";
 import { StockDetails } from "./details";
 import Barcode from "react-barcode";
-// import { StockDetails } from "./details";
 
 const calculateStockValue = (product: ProductWithStockPayload) => {
   return Math.round(product.cost * product.quantity);
@@ -21,11 +20,9 @@ export const columns: ColumnDef<ProductWithStockPayload>[] = [
   {
     header: "Barcode",
     accessorKey: "barcode",
-    // accessorFn: (row) => makeProductCode(Number(row.barcode)),
     cell: ({ row }) => {
       return (
         <div>
-          {/* <Barcode value={row.original.barcode} width={3.5} height={49} /> */}
           <p>{row.original.barcode}</p>
         </div>
       );
@@ -60,13 +57,11 @@ export const columns: ColumnDef<ProductWithStockPayload>[] = [
   {
     header: "Stock Value",
     accessorKey: "cost",
-    // accessorFn: (row) => calculateStockValue(row),
     cell: ({ row }) => calculateStockValue(row.original),
   },
   {
     header: "Sell Value",
     accessorKey: "selling_price",
-    // accessorFn: (row) => calculateSellValue(row),
     cell: ({ row }) => calculateSellValue(row.original),
   },
   {

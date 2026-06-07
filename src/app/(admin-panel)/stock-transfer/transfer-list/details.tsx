@@ -39,7 +39,6 @@ export const TransferDetails: React.FC<Prop> = ({ challans }) => {
   const [loading, setLoading] = React.useState(false);
   const [challanItems, setChallanItems] = React.useState<ChallanItems[]>([]);
 
-  // console.log(status, challanId, challanItems, "from challan details");
   const challanId = Number(challans.id);
 
   React.useEffect(() => {

@@ -25,9 +25,6 @@ export default async function OrderPage({ searchParams }: Props) {
     ? parseInt(searchParams.branch_id as string)
     : null;
 
-  // if (!branchId) {
-  //   return <p>No branch selected</p>;
-  // }
   const page = searchParams.page ? parseInt(searchParams.page as string) : 1;
   const per_page = searchParams.per_page
     ? parseInt(searchParams.per_page as string)
@@ -67,7 +64,6 @@ export default async function OrderPage({ searchParams }: Props) {
       <OrdersTable
         data={fetchedOrders}
         pageCount={pageCount}
-        // currentPage={page}
       />
     </>
   );

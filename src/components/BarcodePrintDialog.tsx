@@ -176,7 +176,6 @@ export function BarcodePrintDialog() {
           </div>
         </DialogHeader>
 
-        {/* Toolbar */}
         <div className="px-5 py-3 border-b flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -197,7 +196,6 @@ export function BarcodePrintDialog() {
           </Button>
         </div>
 
-        {/* Stock rows */}
         <ScrollArea className="h-[340px]">
           <div className="divide-y px-1">
             {loading && (
@@ -248,7 +246,6 @@ export function BarcodePrintDialog() {
                       ৳{stock.selling_price}
                     </span>
 
-                    {/* Qty stepper */}
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
@@ -284,7 +281,6 @@ export function BarcodePrintDialog() {
           </div>
         </ScrollArea>
 
-        {/* Footer */}
         <div className="px-5 py-3 border-t bg-muted/20 flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             Each row is a stock variant. Barcode shown is the same one used in
@@ -310,7 +306,6 @@ export function BarcodePrintDialog() {
         </div>
       </DialogContent>
 
-      {/* Hidden print target */}
       <div className="hidden">
         <div ref={printRef}>
           {labelsToPrint.map(({ stock, qty }) =>

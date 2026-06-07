@@ -14,13 +14,6 @@ import db from "@/db/database";
 export async function DamageProductForm(branch: Branches, itemList: POSItem[]) {
   try {
     await db.transaction(async (trx) => {
-      // console.log(itemList, "itemlist from damage product action=============");
-      // const itemIds = itemList
-      //   .map((item) => (item.id ? BigInt(item.id) : null))
-      //   .filter((id) => id !== null) as bigint[];
-
-      // const damagedProducts = await updateStockCondition(itemIds);
-
       if (branch.id) {
         for (const item of itemList) {
           await decreaseStock(item.barcode, item.quantity, trx);
@@ -49,7 +42,7 @@ export async function DamageProductForm(branch: Branches, itemList: POSItem[]) {
       return { status: true, message: "Damaged stock added successfully" };
     });
   } catch (error: any) {
-    console.log(error);
+    logger.error(`Error adding damaged stock: ${error}`);
     throw new Error(error.message || "Failed to add damaged stocks");
   }
 }

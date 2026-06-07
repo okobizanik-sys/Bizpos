@@ -30,10 +30,6 @@ export const columns: ColumnDef<Settings>[] = [
       />
     ),
   },
-  // {
-  //   header: "VAT Rate",
-  //   accessorKey: "vat_rate",
-  // },
   {
     header: "Login Image",
     accessorKey: "login_image_url",

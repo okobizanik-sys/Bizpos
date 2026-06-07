@@ -31,14 +31,5 @@ export const columns: ColumnDef<CustomerWithOrders>[] = [
   {
     header: "Amount",
     accessorKey: "amount",
-    // cell: ({ row }) => {
-    //   makePrice(row.original.amount);
-    // },
   },
-  // {
-  //   header: "Action",
-  //   cell: ({ row }) => {
-  //   return <CustomerDetailsSheet customer={row.original} />;
-  //   },
-  // },
 ];

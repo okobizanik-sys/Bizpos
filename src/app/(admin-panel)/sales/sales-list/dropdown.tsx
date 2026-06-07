@@ -49,15 +49,12 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
   const [isOrderDataLoading, setIsOrderDataLoading] = React.useState(false);
   const [settingsData, setSettingsData] = React.useState<Settings>();
 
-  // Tracks whether the user has requested a print
-  // Print only fires when PrintInvoice signals it is ready via onReady
   const [shouldPrintInvoice, setShouldPrintInvoice] = React.useState(false);
 
   const { toast } = useToast();
   const branch = useStore(useBranch, (state) => state.branch);
   const router = useRouter();
 
-  // ── Print handlers ──────────────────────────────────────────────────────────
   const handlePrintInvoice = useReactToPrint({
     content: () => printerRef.current,
   });
@@ -66,7 +63,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
     content: () => slipPrinterRef.current,
   });
 
-  // ── Totals ──────────────────────────────────────────────────────────────────
   const totals: TotalsOfOrder[] | undefined = orderData?.map((orderItem) =>
     orderItem.items.reduce(
       (acc: any, item) => {
@@ -79,7 +75,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
     ),
   );
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
   const getSafeImageSrc = (imageUrl?: string) => {
     if (!imageUrl || imageUrl === "null" || imageUrl === "undefined") return "";
     const src = fileUrlGenerator(imageUrl);
@@ -116,7 +111,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
     return data;
   }, [settingsData]);
 
-  // ── Dropdown action handlers ──────────────────────────────────────────────
   const handleViewOrder = async () => {
     await ensureOrderData();
     setSheetOpen(true);
@@ -129,11 +123,8 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
   };
 
   const handlePOSInvoice = async () => {
-    // Mark that user wants to print — actual print fires via onReady callback
     setShouldPrintInvoice(true);
     await ensureOrderData();
-    // If orderData was already loaded, onReady won't fire again from the
-    // canvas effect — so fire print after a short delay as fallback
     setTimeout(() => {
       setShouldPrintInvoice((current) => {
         if (current) {
@@ -145,11 +136,9 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
     }, 1500);
   };
 
-  // ── onReady: fired by PrintInvoice when logo canvas conversion is done ────
   const handleInvoiceReady = React.useCallback(() => {
     setShouldPrintInvoice((current) => {
       if (current) {
-        // Small tick to let React finish rendering the data URL in the img tag
         setTimeout(() => handlePrintInvoice?.(), 50);
         return false;
       }
@@ -157,10 +146,8 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
     });
   }, [handlePrintInvoice]);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* ── Dropdown ── */}
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -193,7 +180,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* ── Order Details Sheet ── */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           className="sm:max-w-[750px] bg-slate-100 overflow-y-auto"
@@ -235,7 +221,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
             </Card>
           </SheetHeader>
 
-          {/* Order Items */}
           {orderData?.map((orderItem) =>
             orderItem.items.map((item, index) => (
               <Card
@@ -283,7 +268,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
             )),
           )}
 
-          {/* Payment Summary */}
           {totals?.map((total, index) => (
             <Card key={index} className="bg-white rounded-lg mt-6 p-4 w-full">
               <Label className="font-semibold">Payment Summary</Label>
@@ -318,9 +302,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
         </SheetContent>
       </Sheet>
 
-      {/* ── Hidden Print: POS Invoice ──
-          IMPORTANT: Use absolute positioning NOT display:none
-          display:none prevents the browser from loading images  */}
       <div
         style={{
           position: "absolute",
@@ -341,7 +322,6 @@ export const SalesDropdown: React.FC<Prop> = ({ order }) => {
         )}
       </div>
 
-      {/* ── Hidden Print: Delivery Slip ── */}
       <div
         style={{
           position: "absolute",

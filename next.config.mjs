@@ -1,4 +1,3 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -36,7 +35,6 @@ const nextConfig = {
       };
     }
 
-    // Exclude knex dynamic import warning
     config.module.rules.push({
       test: /knex\/lib\/migrations\/util\/import-file\.js$/,
       use: "null-loader",

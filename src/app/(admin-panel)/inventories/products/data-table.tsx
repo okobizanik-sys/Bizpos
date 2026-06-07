@@ -240,24 +240,6 @@ export function ProductDataTable<TData, TValue>({
               )}
             />
 
-            {/* <FormField
-              name="categoryFilter"
-              control={filterForm.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            /> */}
 
             <Button type="submit">Apply Filter</Button>
             <Button

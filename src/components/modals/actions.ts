@@ -127,7 +127,6 @@ export async function createSizeAction(_: StateType, formData: FormData) {
 }
 
 export async function createGroupAction(_: StateType, formData: FormData) {
-  // Validate the input data
   const validatedField = schema.safeParse({
     name: formData.get("name") as string,
   });
@@ -140,11 +139,8 @@ export async function createGroupAction(_: StateType, formData: FormData) {
   }
 
   try {
-    // Call the service to create the group
     await createGroup({ name: validatedField.data.name });
 
-    // Revalidate paths if needed
-    // revalidatePath("/groups");
     return {
       status: true,
       error: null,
@@ -158,7 +154,6 @@ export async function createGroupAction(_: StateType, formData: FormData) {
 }
 
 export async function createMembershipAction(_: StateType, formData: FormData) {
-  // Validate the input data
   const validatedField = schema.safeParse({
     type: formData.get("type") as string,
     description: formData.get("description") as string,
@@ -172,13 +167,10 @@ export async function createMembershipAction(_: StateType, formData: FormData) {
   }
 
   try {
-    // Call the service to create the membership
     await createMembership({
       type: validatedField.data.name,
     });
 
-    // Revalidate paths if needed
-    // revalidatePath("/memberships");
     return {
       status: true,
       error: null,

@@ -12,7 +12,6 @@ import { fetchSetting } from "@/services/settings-client";
 import { Settings } from "@/types/shared";
 import React from "react";
 import { fileUrlGenerator } from "@/utils/helpers";
-// import logo from "@/assets/images/Bizpos-LOGO-3-2K.png";
 
 export function Sidebar() {
   const sidebar = useStore(useSidebarToggle, (state) => state);

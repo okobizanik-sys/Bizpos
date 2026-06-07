@@ -3,12 +3,10 @@
 import db from "@/db/database";
 import { Memberships } from "@/types/shared";
 
-// Get all memberships
 export async function getMemberships(): Promise<Memberships[]> {
   return await db("memberships").select("memberships.*").orderBy("type", "asc");
 }
 
-// Get a specific membership by unique identifier
 export async function getMembership(params: {
   where: { id: number }; // Adjust the type based on your unique identifier
 }) {
@@ -19,7 +17,6 @@ export async function getMembership(params: {
   return membership;
 }
 
-// Create a new membership
 export async function createMembership(data: { type: string }) {
   const [insertedData] = await db("memberships").insert(data);
   const lastInsertedId = insertedData;
@@ -28,7 +25,6 @@ export async function createMembership(data: { type: string }) {
   return membership;
 }
 
-// Update an existing membership
 export async function updateMembership(params: {
   where: { id: number }; // Adjust the type based on your unique identifier
   data: { type?: string; description?: string }; // Adjust fields based on your membership model
@@ -43,7 +39,6 @@ export async function updateMembership(params: {
   return membership;
 }
 
-// Delete a membership
 export async function deleteMembership(params: {
   where: { id: number }; // Adjust the type based on your unique identifier
 }) {

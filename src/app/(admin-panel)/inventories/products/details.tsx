@@ -512,7 +512,6 @@ export function ProductDetailSheet({ product }: Props) {
                 <FormItem className="mt-4">
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    {/* <Input placeholder="Enter description" {...field} /> */}
                     <ReactQuill {...field} />
                   </FormControl>
                   <FormDescription className="text-red-400 text-xs min-h-4">

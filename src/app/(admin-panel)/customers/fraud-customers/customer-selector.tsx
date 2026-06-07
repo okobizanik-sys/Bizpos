@@ -19,7 +19,6 @@ export const CustomerSelector: React.FC<Props> = ({
   customers,
   setSelectedCustomer,
 }) => {
-  // console.log(, 'from customer selector');
 
   return (
     <ControlledCombobox

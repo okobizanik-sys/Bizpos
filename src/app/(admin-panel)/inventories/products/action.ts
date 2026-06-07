@@ -25,7 +25,6 @@ export async function updateProductFormAction(id: number, formData: FormData) {
       description: formData.get("description") as string,
     };
 
-    // console.log(data, "data from update product actionF");
 
     let image: Images | undefined = undefined;
 
