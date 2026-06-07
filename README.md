@@ -205,11 +205,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=your_mysql_user
-DB_PASSWORD=your_mysql_password
-DB_NAME=bizpos_db
+DATABASE_URL="mysql://your_mysql_user:your_mysql_password@localhost:3306/bizpos_db"
 
 # NextAuth Configuration
 AUTH_SECRET=your_secret_key_here_minimum_32_characters
@@ -225,11 +221,37 @@ AWS_BUCKET_NAME=your_bucket_name
 NODE_ENV=development
 ```
 
-### 3. Run Database Migrations
+### 3. Generate Prisma Client
 
 ```bash
-npx prisma migrate deploy
+npm run prisma:generate
 ```
+
+Run this again any time you change `prisma/schema.prisma` so the generated client stays in sync.
+
+### 4. Create and Apply a New Migration
+
+```bash
+npm run prisma:migrate -- --name your_migration_name
+```
+
+Use this in development after changing your Prisma models. It creates the migration and applies it to your local database.
+
+### 5. Apply Existing Migrations to Another Database
+
+```bash
+npm run prisma:deploy
+```
+
+Use this for staging or production when you only want to apply migrations that already exist.
+
+If `npm run prisma:migrate` reports that an applied migration was modified or that drift was detected, do not edit the migration file again. For local development only, reset the database and reapply migrations with:
+
+```bash
+npm run prisma:reset -- --force
+```
+
+This will delete local data and rebuild the database from the migration history.
 
 This will create all necessary tables:
 
@@ -241,7 +263,7 @@ This will create all necessary tables:
 - settings, payment_methods
 - And more...
 
-### 4. Seed Database (Optional)
+### 6. Seed Database (Optional)
 
 ```bash
 pnpm seed
@@ -255,11 +277,7 @@ Create a `.env` file with the following variables:
 
 ```env
 # Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=bizpos_db
+DATABASE_URL="mysql://root:your_password@localhost:3306/bizpos_db"
 
 # Authentication
 AUTH_SECRET=generate_a_random_32_character_string
@@ -666,8 +684,11 @@ pnpm lint
 # Install dependencies
 pnpm install --production
 
+# Generate Prisma client
+npm run prisma:generate
+
 # Run migrations
-npx prisma migrate deploy
+npm run prisma:deploy
 
 # Build application
 pnpm build

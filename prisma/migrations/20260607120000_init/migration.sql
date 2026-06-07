@@ -1,4 +1,3 @@
-﻿-- CreateTable
 CREATE TABLE `users` (
     `id` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NULL,
