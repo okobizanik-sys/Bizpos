@@ -1,71 +1,22 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { OrderItem, OrderItems, Orders } from "@/types/shared";
 import { OrderWithItem } from "@/app/(admin-panel)/pos/item-selector";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
-import { ensureSalesSchema } from "./supplier";
 
-export async function ensureOrderItemsSchema() {
-  const [hasBarcode, hasCogs, hasColorId, hasSizeId] = await Promise.all([
-    db.schema.hasColumn("order_items", "barcode"),
-    db.schema.hasColumn("order_items", "cogs"),
-    db.schema.hasColumn("order_items", "color_id"),
-    db.schema.hasColumn("order_items", "size_id"),
-  ]);
-
-  if (!hasBarcode || !hasCogs || !hasColorId || !hasSizeId) {
-    await db.schema.alterTable("order_items", (table) => {
-      if (!hasBarcode) {
-        table.string("barcode").nullable();
-      }
-      if (!hasCogs) {
-        table.integer("cogs").nullable();
-      }
-      if (!hasColorId) {
-        table
-          .integer("color_id")
-          .unsigned()
-          .nullable()
-          .references("id")
-          .inTable("colors")
-          .onDelete("CASCADE");
-      }
-      if (!hasSizeId) {
-        table
-          .integer("size_id")
-          .unsigned()
-          .nullable()
-          .references("id")
-          .inTable("sizes")
-          .onDelete("CASCADE");
-      }
-    });
-  }
-}
+// ensureOrderItemsSchema removed as schema is statically managed
 
 export async function createOrder(data: Orders) {
-  const [insertResult] = await db("orders").insert(data);
-  const lastInsertId = insertResult;
-
-  const [order] = await db("orders").where({ id: lastInsertId });
+  const order = await prisma.orders.create({ data: data as any });
   logger.info(`Order created successfully: ${order.id}`);
   return order;
 }
 
-
-
-
-
-
-
-
 export async function getOrders(
   filters: OrderFilter & { page?: number; per_page?: number; branchId?: number }
 ): Promise<Orders[]> {
-  await ensureSalesSchema();
-
   const {
     search,
     status,
@@ -78,100 +29,112 @@ export async function getOrders(
   } = filters;
   const offset = (page - 1) * per_page;
 
-  const query = db("orders")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
-    .select(
-      "orders.*",
-      "customers.customer",
-      "customers.phone",
-      "customers.address",
-      "suppliers.name as supplierName"
-    )
-    .orderBy("date", "desc")
-    .limit(per_page)
-    .offset(offset);
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
 
   if (branchId) {
-    query.where("orders.branch_id", branchId);
+    whereStr += " AND o.branch_id = ?";
+    queryParams.push(branchId);
   }
 
   if (search) {
-    query.where(function () {
-      this.where("customers.customer", "LIKE", `%${search}%`)
-        .orWhere("customers.phone", "LIKE", `%${search}%`)
-        .orWhere("orders.order_id", "LIKE", `%${search}%`);
-    });
+    whereStr += " AND (c.customer LIKE ? OR c.phone LIKE ? OR o.order_id LIKE ?)";
+    queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (status) {
     if (status === "ALL") {
-      query.whereIn("orders.status", ["COMPLETED", "EXCHANGED"]);
+      whereStr += " AND o.status IN ('COMPLETED', 'EXCHANGED')";
     } else {
-      query.andWhere("orders.status", status);
+      whereStr += " AND o.status = ?";
+      queryParams.push(status);
     }
   }
 
   if (saleChannel && saleChannel !== "ALL") {
-    query.andWhere("orders.sale_channel", saleChannel);
+    whereStr += " AND o.sale_channel = ?";
+    queryParams.push(saleChannel);
   }
 
   if (fromDate) {
-    query.andWhere("orders.date", ">=", fromDate);
+    whereStr += " AND o.date >= ?";
+    queryParams.push(fromDate);
   }
 
   if (toDate) {
-    query.andWhere("orders.date", "<=", toDate);
+    whereStr += " AND o.date <= ?";
+    queryParams.push(toDate);
   }
 
-  return await query;
+  const query = `
+    SELECT 
+      o.*,
+      c.customer,
+      c.phone,
+      c.address,
+      s.name as supplierName
+    FROM orders o
+    LEFT JOIN customers c ON o.customer_id = c.id
+    LEFT JOIN suppliers s ON o.supplier_id = s.id
+    WHERE ${whereStr}
+    ORDER BY o.date DESC
+    LIMIT ${per_page} OFFSET ${offset}
+  `;
+
+  return await prisma.$queryRawUnsafe<Orders[]>(query, ...queryParams);
 }
 
 export async function getOrdersCount(
   filters: OrderFilter & { branchId?: number }
 ): Promise<number> {
-  await ensureSalesSchema();
-
   const { search, status, saleChannel, fromDate, toDate, branchId } = filters;
 
-  const query = db("orders")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .countDistinct("orders.id as total");
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
 
   if (branchId) {
-    query.where("orders.branch_id", branchId);
+    whereStr += " AND o.branch_id = ?";
+    queryParams.push(branchId);
   }
 
   if (search) {
-    query.where(function () {
-      this.where("customers.customer", "LIKE", `%${search}%`)
-        .orWhere("customers.phone", "LIKE", `%${search}%`)
-        .orWhere("orders.order_id", "LIKE", `%${search}%`);
-    });
+    whereStr += " AND (c.customer LIKE ? OR c.phone LIKE ? OR o.order_id LIKE ?)";
+    queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (status) {
     if (status === "ALL") {
-      query.whereIn("orders.status", ["COMPLETED", "EXCHANGED"]);
+      whereStr += " AND o.status IN ('COMPLETED', 'EXCHANGED')";
     } else {
-      query.andWhere("orders.status", status);
+      whereStr += " AND o.status = ?";
+      queryParams.push(status);
     }
   }
 
   if (saleChannel && saleChannel !== "ALL") {
-    query.andWhere("orders.sale_channel", saleChannel);
+    whereStr += " AND o.sale_channel = ?";
+    queryParams.push(saleChannel);
   }
 
   if (fromDate) {
-    query.andWhere("orders.date", ">=", fromDate);
+    whereStr += " AND o.date >= ?";
+    queryParams.push(fromDate);
   }
 
   if (toDate) {
-    query.andWhere("orders.date", "<=", toDate);
+    whereStr += " AND o.date <= ?";
+    queryParams.push(toDate);
   }
 
-  const [result] = await query;
-  return Number(result?.total || 0);
+  const query = `
+    SELECT COUNT(DISTINCT o.id) as total
+    FROM orders o
+    LEFT JOIN customers c ON o.customer_id = c.id
+    WHERE ${whereStr}
+  `;
+
+  const result = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
+  return Number(result[0]?.total || 0);
 }
 
 export async function getOrdersByCustomer(
@@ -179,105 +142,131 @@ export async function getOrdersByCustomer(
 ): Promise<Orders[]> {
   const { search, status, fromDate, toDate } = filters;
 
-  const query = db("orders")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .select(
-      "orders.*",
-      "customers.customer",
-      "customers.phone",
-      "customers.address"
-    )
-    .orderBy("date", "desc");
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
+
   if (search) {
-    query.where(function () {
-      this.where("customers.customer", "LIKE", `%${search}%`)
-        .orWhere("customers.phone", "LIKE", `%${search}%`)
-        .orWhere("orders.order_id", "LIKE", `%${search}%`); // Adjust field names as necessary
-    });
+    whereStr += " AND (c.customer LIKE ? OR c.phone LIKE ? OR o.order_id LIKE ?)";
+    queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (status) {
-    query.andWhere("orders.status", status);
+    whereStr += " AND o.status = ?";
+    queryParams.push(status);
   }
 
   if (fromDate) {
-    query.andWhere("orders.date", ">=", fromDate);
+    whereStr += " AND o.date >= ?";
+    queryParams.push(fromDate);
   }
 
   if (toDate) {
-    query.andWhere("orders.date", "<=", toDate);
+    whereStr += " AND o.date <= ?";
+    queryParams.push(toDate);
   }
 
-  const orders = await query;
+  const query = `
+    SELECT 
+      o.*,
+      c.customer,
+      c.phone,
+      c.address
+    FROM orders o
+    LEFT JOIN customers c ON o.customer_id = c.id
+    WHERE ${whereStr}
+    ORDER BY o.date DESC
+  `;
 
-  return orders;
+  return await prisma.$queryRawUnsafe<Orders[]>(query, ...queryParams);
 }
 
 export async function getOrderByOrderId(orderId: string): Promise<Orders> {
-  await ensureSalesSchema();
+  const query = `
+    SELECT 
+      o.*,
+      c.customer,
+      c.phone,
+      c.address,
+      s.name as supplierName
+    FROM orders o
+    LEFT JOIN customers c ON o.customer_id = c.id
+    LEFT JOIN suppliers s ON o.supplier_id = s.id
+    WHERE o.order_id = ?
+    ORDER BY o.date DESC
+    LIMIT 1
+  `;
 
-  const query = db("orders")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
-    .select(
-      "orders.*",
-      "customers.customer",
-      "customers.phone",
-      "customers.address",
-      "suppliers.name as supplierName"
-    )
-    .where("orders.order_id", orderId)
-    .orderBy("date", "desc")
-    .first();
-
-  const order = await query;
-  return order;
+  const result = await prisma.$queryRawUnsafe<Orders[]>(query, orderId);
+  return result[0];
 }
 
 export async function getOrderById(id: number): Promise<OrderItems | null> {
-  const order = await db("orders").where({ id }).first(); // Adjust table name
+  const order = await prisma.orders.findFirst({ where: { id: BigInt(id) } });
   if (!order) return null;
 
-  const orderItems = await db("order_items").where({ order_id: order.id });
-  return { ...order, orderItems };
+  const orderItems = await prisma.order_items.findMany({ where: { order_id: BigInt(id) } });
+  return { ...order, orderItems } as unknown as OrderItems;
+}
+
+function mapWhereParams(where: Record<string, any>) {
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
+  
+  for (const key in where) {
+    if (where.hasOwnProperty(key)) {
+      if (key === 'orders.id' || key === 'id') {
+        whereStr += " AND o.id = ?";
+      } else if (key === 'orders.order_id') {
+        whereStr += " AND o.order_id = ?";
+      } else {
+        // Fallback for simple equal matches
+        whereStr += ` AND ${key.replace('orders.', 'o.').replace('order_items.', 'oi.')} = ?`;
+      }
+      queryParams.push(where[key]);
+    }
+  }
+  return { whereStr, queryParams };
 }
 
 export async function getOrderByIdWithItems(params: {
   where: { [key: string]: any };
 }): Promise<OrderWithItem[] | null> {
-  const orderItemQuery = db("orders")
-    .leftJoin("order_items", "orders.id", "order_items.order_id")
-    .leftJoin("products", "order_items.product_id", "products.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .leftJoin("products_colors", "products_colors.product_id", "products.id")
-    .leftJoin("products_sizes", "products_sizes.product_id", "products.id")
-    .leftJoin("stocks", "stocks.product_id", "products.id")
-    .leftJoin("colors", "order_items.color_id", "colors.id")
-    .leftJoin("sizes", "order_items.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .select(
-      "order_items.*",
-      "orders.id as ordersId",
-      "orders.order_id as orderId",
-      "products.id as productId",
-      "products.name as productName",
-      "products.selling_price as sellingPrice",
-      "colors.name as colorName",
-      "colors.id as colorId",
-      "sizes.name as sizeName",
-      "sizes.id as sizeId",
-      "images.url as productImageUrl",
-      "stocks.cost",
-      "branches.id as branchId",
-      "customers.customer",
-      "customers.phone",
-      "customers.address",
-      "customers.id as customerId"
-    )
-    .where(params.where);
+  const { whereStr, queryParams } = mapWhereParams(params.where);
 
-  const orderItem = await orderItemQuery;
+  const query = `
+    SELECT 
+      oi.*,
+      o.id as ordersId,
+      o.order_id as orderId,
+      p.id as productId,
+      p.name as productName,
+      p.selling_price as sellingPrice,
+      col.name as colorName,
+      col.id as colorId,
+      sz.name as sizeName,
+      sz.id as sizeId,
+      i.url as productImageUrl,
+      s.cost,
+      b.id as branchId,
+      c.customer,
+      c.phone,
+      c.address,
+      c.id as customerId
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.id
+    LEFT JOIN images i ON p.image_id = i.id
+    LEFT JOIN products_colors pc ON pc.product_id = p.id
+    LEFT JOIN products_sizes ps ON ps.product_id = p.id
+    LEFT JOIN stocks s ON s.product_id = p.id
+    LEFT JOIN colors col ON oi.color_id = col.id
+    LEFT JOIN sizes sz ON oi.size_id = sz.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN customers c ON o.customer_id = c.id
+    WHERE ${whereStr}
+  `;
+
+  const orderItem = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
 
   const order = orderItem.reduce((acc: any, item: any) => {
     if (!acc[item.orderId]) {
@@ -295,7 +284,7 @@ export async function getOrderByIdWithItems(params: {
       (i: any) => i.barcode === item.barcode
     );
 
-    if (!isDuplicate) {
+    if (!isDuplicate && item.id) { // Ensure item exists
       acc[item.orderId].items.push({
         id: item.id,
         productId: item.productId,
@@ -321,41 +310,44 @@ export async function getOrderByIdWithItems(params: {
 export async function getOrdersWithItems(params: {
   where: { [key: string]: any };
 }): Promise<OrderWithItem[] | null> {
-  const orderItemsQuery = db("orders")
-    .leftJoin("order_items", "orders.id", "order_items.order_id")
-    .leftJoin("products", "order_items.product_id", "products.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .leftJoin("products_colors", "products_colors.product_id", "products.id")
-    .leftJoin("products_sizes", "products_sizes.product_id", "products.id")
-    .leftJoin("stocks", "stocks.product_id", "products.id")
-    .leftJoin("colors", "order_items.color_id", "colors.id")
-    .leftJoin("sizes", "order_items.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .select(
-      "order_items.*",
-      "orders.*",
-      "orders.id as ordersId",
-      "orders.order_id as orderId",
-      "products.id as productId",
-      "products.name as productName",
-      "products.selling_price as sellingPrice",
-      "colors.name as colorName",
-      "colors.id as colorId",
-      "sizes.name as sizeName",
-      "sizes.id as sizeId",
-      "images.url as productImageUrl",
-      "stocks.cost",
-      "branches.id as branchId",
-      "customers.customer",
-      "customers.phone",
-      "customers.address",
-      "customers.id as customerId"
-    )
-    .where(params.where)
-    .orderBy("orders.created_at", "desc");
+  const { whereStr, queryParams } = mapWhereParams(params.where);
 
-  const orderItems = await orderItemsQuery;
+  const query = `
+    SELECT 
+      oi.*,
+      o.*,
+      o.id as ordersId,
+      o.order_id as orderId,
+      p.id as productId,
+      p.name as productName,
+      p.selling_price as sellingPrice,
+      col.name as colorName,
+      col.id as colorId,
+      sz.name as sizeName,
+      sz.id as sizeId,
+      i.url as productImageUrl,
+      s.cost,
+      b.id as branchId,
+      c.customer,
+      c.phone,
+      c.address,
+      c.id as customerId
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.id
+    LEFT JOIN images i ON p.image_id = i.id
+    LEFT JOIN products_colors pc ON pc.product_id = p.id
+    LEFT JOIN products_sizes ps ON ps.product_id = p.id
+    LEFT JOIN stocks s ON s.product_id = p.id
+    LEFT JOIN colors col ON oi.color_id = col.id
+    LEFT JOIN sizes sz ON oi.size_id = sz.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN customers c ON o.customer_id = c.id
+    WHERE ${whereStr}
+    ORDER BY o.created_at DESC
+  `;
+
+  const orderItems = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
   const orders = orderItems.reduce((acc: any, item: any) => {
     if (!acc[item.orderId]) {
       acc[item.orderId] = {
@@ -380,7 +372,7 @@ export async function getOrdersWithItems(params: {
       (i: any) => i.barcode === item.barcode
     );
 
-    if (!isDuplicate) {
+    if (!isDuplicate && item.id) {
       acc[item.orderId].items.push({
         id: item.id,
         productId: item.productId,
@@ -407,8 +399,10 @@ export async function updateOrderStatus(
   id: number,
   status: "COMPLETED" | "EXCHANGED" | "RETURN"
 ) {
-  const order = await db("orders").where({ id }).update({ status });
-
+  const order = await prisma.orders.update({
+    where: { id: BigInt(id) },
+    data: { status }
+  });
   return order;
 }
 
@@ -417,30 +411,35 @@ export async function updateOrder(
   data: Partial<Orders>,
   itemsData: OrderItem[] = []
 ) {
-  await db("orders").where({ id }).update(data);
-  const [updatedOrder] = await db("orders").where({ id });
+  await prisma.orders.update({
+    where: { id: BigInt(id) },
+    data: data as any
+  });
 
-  logger.info(`Order updated: ${updatedOrder.id}`);
+  logger.info(`Order updated: ${id}`);
 
   if (itemsData.length > 0) {
     for (const item of itemsData) {
-      const { id: itemId, ...updateFields } = item;
+      const { id: itemId, ...updateFields } = item as any;
 
       if (itemId) {
-        const existingItem = await db("order_items")
-          .where({ id: itemId, order_id: id })
-          .first();
+        const existingItem = await prisma.order_items.findFirst({
+          where: { id: BigInt(itemId), order_id: BigInt(id) }
+        });
 
         if (existingItem) {
-          await db("order_items")
-            .where({ id: itemId, order_id: id })
-            .update(updateFields);
+          await prisma.order_items.update({
+            where: { id: BigInt(itemId) },
+            data: updateFields
+          });
           logger.info(`Order item updated: ${itemId}`);
         } else {
           logger.warn(`Order item with id ${itemId} not found for update.`);
         }
       } else {
-        await db("order_items").insert({ ...item, order_id: id });
+        await prisma.order_items.create({
+          data: { ...updateFields, order_id: BigInt(id) }
+        });
         logger.info(`New order item created: ${item.product_id}`);
       }
     }
@@ -455,11 +454,18 @@ export async function updateOrderByOrderId(
   data: Partial<Orders>,
   itemsData: OrderItem[] = []
 ) {
-  await db("orders").where({ order_id: orderId }).update(data);
-  const [updatedOrder] = await db("orders").where({ order_id: orderId });
+  const updatedOrder = await prisma.orders.updateMany({
+    where: { order_id: orderId },
+    data: data as any
+  });
 
-  logger.info(`Order updated: ${updatedOrder.id}`);
+  const order = await prisma.orders.findFirst({ where: { order_id: orderId } });
 
-  const updatedOrderWithItems = await getOrderById(updatedOrder.id);
-  return updatedOrderWithItems;
+  logger.info(`Order updated: ${order?.id}`);
+
+  if (order) {
+     return await getOrderById(Number(order.id));
+  }
+  
+  return null;
 }

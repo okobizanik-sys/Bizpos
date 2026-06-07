@@ -1,46 +1,29 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function getCategories() {
-  return await db("categories").orderBy("name", "asc");
+  return await prisma.categories.findMany({ orderBy: { name: "asc" } });
 }
 
-export async function getCategory(params: {
-  where: { id: number }; // Adjust the unique field as necessary
-}) {
-  const category = await db("categories").where(params.where).first();
-  if (!category) {
-    throw new Error("Category not found");
-  }
+export async function getCategory(params: { where: { id: number } }) {
+  const category = await prisma.categories.findFirst({ where: params.where });
+  if (!category) throw new Error("Category not found");
   return category;
 }
 
 export async function createCategory(data: { name: string }) {
-  const [category] = await db("categories").insert(data);
-  return category;
+  return await prisma.categories.create({ data });
 }
 
 export async function updateCategory(params: {
-  where: { id: number }; // Adjust the unique field as necessary
-  data: { name?: string }; // Adjust fields as necessary
+  where: { id: number };
+  data: { name?: string };
 }) {
-  const insertResult = await db("categories")
-    .where(params.where)
-    .update(params.data);
-  const category = await db("categories").where({ id: insertResult });
-  if (!category) {
-    throw new Error("Category not found");
-  }
-  return category;
+  return await prisma.categories.update({ where: params.where, data: params.data });
 }
 
-export async function deleteCategory(params: {
-  where: { id: number }; // Adjust the unique field as necessary
-}) {
-  const deletedCount = await db("categories").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("Category not found");
-  }
+export async function deleteCategory(params: { where: { id: number } }) {
+  await prisma.categories.delete({ where: params.where });
   return { message: "Category deleted successfully" };
 }

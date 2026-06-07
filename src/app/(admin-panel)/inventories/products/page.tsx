@@ -4,7 +4,7 @@ import { fileUrlGenerator } from "@/utils/helpers";
 import { getProducts } from "@/services/product";
 import { ProductDataTable } from "./data-table";
 import { getCategories } from "@/services/category";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export const revalidate = 0;
 
@@ -37,8 +37,11 @@ export default async function ProductListPage({ searchParams }: Props) {
     take: limit,
   });
 
-  const [result] = await db("products").count("* as total");
-  const totals = Number(result.total);
+  const countResult = await prisma.products.aggregate({
+    _count: { id: true }
+  });
+
+  const totals = Number(countResult._count.id);
   const pageCount = Math.ceil(totals / limit);
 
   const categories = await getCategories();
@@ -47,7 +50,7 @@ export default async function ProductListPage({ searchParams }: Props) {
     <ContentLayout title="Product List">
       <ProductDataTable
         columns={columns}
-        data={data.products.map((product) => ({
+        data={data.products.map((product: any) => ({
           ...product,
           imageUrl: product.imageUrl
             ? fileUrlGenerator(product.imageUrl)

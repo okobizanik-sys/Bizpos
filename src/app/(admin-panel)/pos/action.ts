@@ -6,10 +6,9 @@ import { revalidatePath } from "next/cache";
 import { POSItem } from "./item-selector";
 import { Branches, OrderItem, OrderItems, Orders } from "@/types/shared";
 import { CustomerData } from "./exchange-form";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { toUpperCaseWords } from "@/utils/helpers";
 import { updateOrderByOrderId } from "@/services/order";
-import { ensureSalesSchema } from "@/services/supplier";
 
 export async function createBillDetails(
   formData: FormData,
@@ -23,13 +22,10 @@ export async function createBillDetails(
   subtotal: number,
 ) {
   try {
-    await ensureSalesSchema();
-
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       const { calculateTotals } = usePOSStore.getState();
 
       calculateTotals();
-
 
       if (total === 0) {
         throw new Error(
@@ -43,13 +39,10 @@ export async function createBillDetails(
         address: toUpperCaseWords(String(formData.get("address"))),
       };
 
-      const [insertResult] = await trx("customers").insert(customerData);
-      const lastInsertId = insertResult;
-
-      const [customer] = await trx("customers").where({ id: lastInsertId });
+      const customer = await tx.customers.create({ data: customerData });
       logger.info(`Customer created: ${customer.id}`);
 
-      const orderData: Orders = {
+      const orderData = {
         order_id: orderId,
         total: total,
         customer_id: customer.id,
@@ -58,18 +51,13 @@ export async function createBillDetails(
         discount: Number(discount) + Number(customBdtAmount),
         sub_total: Number(subtotal),
         sale_channel:
-          (String(formData.get("saleChannel") || "OFFLINE").toUpperCase() as
-            | "ONLINE"
-            | "OFFLINE"),
+          (String(formData.get("saleChannel") || "OFFLINE").toUpperCase()),
       };
 
-      const [insertOrderResult] = await trx("orders").insert(orderData);
-      const lastInsertOrderId = insertOrderResult;
-
-      const [order] = await trx("orders").where({ id: lastInsertOrderId });
+      const order = await tx.orders.create({ data: orderData as any });
       logger.info(`Order created: ${order.id}`);
 
-      const orderItems: OrderItem[] = itemList.map((item: POSItem) => ({
+      const orderItems = itemList.map((item: POSItem) => ({
         order_id: order.id,
         product_id: Number(item.productId),
         quantity: item.quantity,
@@ -80,25 +68,22 @@ export async function createBillDetails(
         size_id: item.sizeId ? Number(item.sizeId) : null,
       }));
 
-      const [insertedIds] = await trx("order_items").insert(orderItems);
-      const lastInsertIds = insertedIds;
+      await tx.order_items.createMany({ data: orderItems as any[] });
+      logger.info(`Items created`);
 
-      const orderItem = await trx("order_items").where({
-        id: lastInsertIds,
-      });
-      logger.info(`Items created ${orderItem}`);
       for (const item of itemList) {
-        const stocks = await trx("stocks")
-          .where({
-            product_id: item.productId,
+        const stocks = await tx.stocks.findMany({
+          where: {
+            product_id: BigInt(item.productId),
             branch_id: Number(branch.id),
             barcode: item.barcode,
-          })
-          .andWhere({ condition: "new" })
-          .orderBy("created_at", "asc");
+            condition: "new"
+          },
+          orderBy: { created_at: "asc" }
+        });
 
         const totalAvailable = stocks.reduce(
-          (sum: number, stock: { quantity: number }) =>
+          (sum: number, stock: any) =>
             sum + Number(stock.quantity),
           0
         );
@@ -120,11 +105,12 @@ export async function createBillDetails(
           remainingQuantity -= deductQuantity;
 
           if (newQuantity > 0) {
-            await trx("stocks")
-              .where({ id: stock.id })
-              .update({ quantity: newQuantity, updated_at: new Date() });
+            await tx.stocks.update({
+              where: { id: stock.id },
+              data: { quantity: newQuantity, updated_at: new Date() }
+            });
           } else {
-            await trx("stocks").where({ id: stock.id }).delete();
+            await tx.stocks.delete({ where: { id: stock.id } });
           }
         }
       }
@@ -147,24 +133,6 @@ export async function createBillDetails(
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export async function updateBillDetails(
   returnItemList: OrderItems[],
   formData: FormData,
@@ -179,7 +147,7 @@ export async function updateBillDetails(
       throw new Error("Branch is required for exchange checkout.");
     }
 
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       const customersData = {
         customer: formData.get("name") as string,
         phone: formData.get("phone") as string,
@@ -188,8 +156,11 @@ export async function updateBillDetails(
 
       const customerId = customerData?.customerId as number;
 
-      await trx("customers").where({ id: customerId }).update(customersData);
-      const [customer] = await trx("customers").where({ id: customerId });
+      await tx.customers.update({
+        where: { id: customerId },
+        data: customersData
+      });
+      const customer = await tx.customers.findUnique({ where: { id: customerId } });
       logger.info(`Customer updated: ${customer}`);
 
       const { calculateExgTotals, subExgTotal, deliveryCharge } =
@@ -199,7 +170,7 @@ export async function updateBillDetails(
         throw new Error("Total cannot be 0");
       }
 
-      const orderDataInput: Orders = {
+      const orderDataInput = {
         order_id: customerData?.orderId as string,
         total: total,
         sub_total: subExgTotal,
@@ -216,21 +187,25 @@ export async function updateBillDetails(
         throw new Error("Order ID is required to update the order.");
       }
 
-      await trx("orders").where({ id: ordersId }).update(orderDataInput);
-      const [updatedOrder] = await trx("orders").where({ id: ordersId });
-      logger.info(`Order updated: ${updatedOrder.id}`);
+      await tx.orders.update({
+        where: { id: BigInt(ordersId) },
+        data: orderDataInput as any
+      });
+      const updatedOrder = await tx.orders.findUnique({ where: { id: BigInt(ordersId) } });
+      logger.info(`Order updated: ${updatedOrder?.id}`);
 
       for (const item of addExchangeItemList) {
-        const existingStocks = await trx("stocks")
-          .where({
+        const existingStocks = await tx.stocks.findMany({
+          where: {
             barcode: item.barcode,
             branch_id: Number(branch.id),
-          })
-          .andWhere({ condition: "new" })
-          .orderBy("created_at", "asc");
+            condition: "new"
+          },
+          orderBy: { created_at: "asc" }
+        });
 
         const totalAvailable = existingStocks.reduce(
-          (sum: number, stock: { quantity: number }) =>
+          (sum: number, stock: any) =>
             sum + Number(stock.quantity),
           0
         );
@@ -252,92 +227,98 @@ export async function updateBillDetails(
           remainingQuantity -= deductQuantity;
 
           if (newQuantity > 0) {
-            await trx("stocks")
-              .where({ id: stock.id })
-              .update({ quantity: newQuantity, updated_at: new Date() });
+            await tx.stocks.update({
+              where: { id: stock.id },
+              data: { quantity: newQuantity, updated_at: new Date() }
+            });
           } else {
-            await trx("stocks").where({ id: stock.id }).delete();
+            await tx.stocks.delete({ where: { id: stock.id } });
           }
         }
 
-        const existingOrderItem = await trx("order_items")
-          .where({
-            order_id: ordersId,
-            product_id: item.productId,
+        const existingOrderItem = await tx.order_items.findFirst({
+          where: {
+            order_id: BigInt(ordersId),
+            product_id: BigInt(item.productId ?? 0),
             barcode: item.barcode,
-          })
-          .first();
+          }
+        });
 
         if (existingOrderItem) {
-          await trx("order_items")
-            .where({ id: existingOrderItem.id })
-            .update({
+          await tx.order_items.update({
+            where: { id: existingOrderItem.id },
+            data: {
               quantity: existingOrderItem.quantity + item.quantity,
               price:
                 existingOrderItem.price + item.sellingPrice * item.quantity,
               updated_at: new Date(),
-            });
+            }
+          });
         } else {
-          await trx("order_items").insert({
-            order_id: BigInt(ordersId),
-            product_id: Number(item.productId),
-            quantity: item.quantity,
-            price: item.sellingPrice * item.quantity,
-            barcode: item.barcode,
-            color_id: item.colorId,
-            size_id: item.sizeId,
-            created_at: new Date(),
-            updated_at: new Date(),
+          await tx.order_items.create({
+            data: {
+              order_id: BigInt(ordersId),
+              product_id: BigInt(item.productId ?? 0),
+              quantity: item.quantity,
+              price: item.sellingPrice * item.quantity,
+              barcode: item.barcode,
+              color_id: item.colorId,
+              size_id: item.sizeId,
+              created_at: new Date(),
+              updated_at: new Date(),
+            } as any
           });
         }
       }
 
       for (const item of returnItemList) {
-        const existingStock = await trx("stocks")
-          .where({
+        const existingStock = await tx.stocks.findFirst({
+          where: {
             barcode: item.barcode,
             branch_id: item.branchId,
-          })
-          .first();
+          }
+        });
 
         if (existingStock) {
-          await trx("stocks")
-            .where({ id: existingStock.id })
-            .update({ quantity: existingStock.quantity + item.quantity });
+          await tx.stocks.update({
+            where: { id: existingStock.id },
+            data: { quantity: Number(existingStock.quantity ?? 0) + item.quantity }
+          });
         } else {
-          await trx("stocks").insert({
-            product_id: item.productId,
-            branch_id: item.branchId,
-            color_id: item.colorId,
-            size_id: item.sizeId,
-            barcode: item.barcode,
-            cost: item.cost,
-            quantity: item.quantity,
-            created_at: new Date(),
-            updated_at: new Date(),
+          await tx.stocks.create({
+            data: {
+              product_id: BigInt(item.productId ?? 0),
+              branch_id: item.branchId,
+              color_id: item.colorId,
+              size_id: item.sizeId,
+              barcode: item.barcode,
+              cost: item.cost,
+              quantity: item.quantity,
+              created_at: new Date(),
+              updated_at: new Date(),
+            } as any
           });
         }
 
-        const existingOrderItem = await trx("order_items")
-          .where({
-            order_id: ordersId,
-            product_id: item.productId,
+        const existingOrderItem = await tx.order_items.findFirst({
+          where: {
+            order_id: BigInt(ordersId),
+            product_id: BigInt(item.productId ?? 0),
             barcode: item.barcode,
-          })
-          .first();
+          }
+        });
 
         if (existingOrderItem) {
           if (existingOrderItem.quantity > item.quantity) {
-            await trx("order_items")
-              .where({ id: existingOrderItem.id })
-              .update({
+            await tx.order_items.update({
+              where: { id: existingOrderItem.id },
+              data: {
                 quantity: existingOrderItem.quantity - item.quantity,
                 updated_at: new Date(),
-              });
+              }
+            });
           } else {
-            await trx("order_items")
-              .where({ id: existingOrderItem.id })
-              .delete();
+            await tx.order_items.delete({ where: { id: existingOrderItem.id } });
           }
         }
       }

@@ -60,7 +60,7 @@ A comprehensive, enterprise-grade Point of Sale (POS) system built with Next.js 
 
 - **NextAuth.js Integration** - Secure authentication with JWT tokens
 - **Middleware Protection** - Route-level authorization
-- **Optimized Database Queries** - Efficient data fetching with Knex.js
+- **Optimized Database Queries** - Efficient data fetching with Prisma
 - **Server-Side Rendering** - Fast page loads with Next.js 14
 - **Type Safety** - Full TypeScript implementation
 - **Error Boundaries** - Graceful error handling
@@ -86,7 +86,7 @@ A comprehensive, enterprise-grade Point of Sale (POS) system built with Next.js 
 
 - **Runtime:** Node.js
 - **Database:** MySQL 2 (via mysql2 ^3.13.0)
-- **Query Builder:** Knex.js 3.1.0
+- **ORM:** Prisma 5.22.0
 - **Authentication:** NextAuth.js 5.0.0-beta.19
 - **Password Hashing:** bcryptjs 2.4.3
 - **File Storage:** AWS S3 (via @aws-sdk/client-s3)
@@ -143,7 +143,7 @@ A comprehensive, enterprise-grade Point of Sale (POS) system built with Next.js 
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Database Layer (Knex.js)                        │
+│              Database Layer (Prisma)                         │
 │   ┌─────────────────────────────────────────────────────┐   │
 │   │               MySQL Database                         │   │
 │   │  • Users          • Products      • Orders           │   │
@@ -228,7 +228,7 @@ NODE_ENV=development
 ### 3. Run Database Migrations
 
 ```bash
-pnpm migrate
+npx prisma migrate deploy
 ```
 
 This will create all necessary tables:
@@ -356,7 +356,7 @@ pnpm lint
 
 ```
 biz_pos-main-akash/
-├── migrations/              # Database migrations (Knex.js)
+├── prisma/migrations/       # Database migrations (Prisma)
 │   ├── 20241009094332_user.ts
 │   ├── 20241009110442_product.ts
 │   ├── 20241009110810_order.ts
@@ -615,7 +615,7 @@ Built with **Radix UI** and **Tailwind CSS**:
 
 ### Database Operations
 
-- All queries through Knex.js
+- All queries through Prisma Client
 - Use migrations for schema changes
 - Never commit raw SQL in application code
 - Always use parameterized queries
@@ -667,7 +667,7 @@ pnpm lint
 pnpm install --production
 
 # Run migrations
-pnpm migrate
+npx prisma migrate deploy
 
 # Build application
 pnpm build

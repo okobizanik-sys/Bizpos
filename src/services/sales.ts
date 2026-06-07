@@ -1,8 +1,10 @@
-import db from "@/db/database";
+"use server";
+
+import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { DashboardSalesData, SalesData, SalesSummary } from "@/types/shared";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
-import { ensureSalesSchema } from "./supplier";
+import { Prisma } from "@prisma/client";
 
 export type DashboardFilterType = "today" | "week" | "month" | "lifetime";
 export type DashboardSummary = {
@@ -21,75 +23,67 @@ export type DashboardSummary = {
   >;
 };
 
-
-
-
-
-
-
-
-
-
 export async function getSalesData(filters: OrderFilter): Promise<SalesData[]> {
-  await ensureSalesSchema();
-
   const { fromDate, toDate, search, saleChannel } = filters;
 
-  const cogsSubquery = db("order_items")
-    .select("order_id")
-    .sum({ cogs_total: "cogs" })
-    .groupBy("order_id")
-    .as("order_cogs");
-
-  const query = db("orders")
-    .select(
-      "orders.date",
-      "branches.id as branchId",
-      "branches.name as branchName",
-      "orders.order_id",
-      "customers.customer",
-      "customers.phone",
-      "customers.address",
-      "orders.total",
-      "orders.sub_total",
-      "orders.vat",
-      "orders.paid_amount",
-      "orders.due_amount",
-      "orders.discount",
-      "orders.delivery_charge",
-      db.raw("COALESCE(order_cogs.cogs_total, 0) as cost_of_goods_sold")
-    )
-    .whereIn("orders.status", ["COMPLETED", "EXCHANGED"])
-    .leftJoin("branches", "orders.branch_id", "branches.id")
-    .leftJoin("customers", "orders.customer_id", "customers.id")
-    .leftJoin("suppliers", "orders.supplier_id", "suppliers.id")
-    .leftJoin(cogsSubquery, "order_cogs.order_id", "orders.id")
-    .orderBy("orders.date", "desc");
-
-  query.select("orders.sale_channel", "orders.supplier_id", "suppliers.name as supplierName");
+  let whereStr = "o.status IN ('COMPLETED', 'EXCHANGED')";
+  const queryParams: any[] = [];
 
   if (search) {
-    query.andWhere((builder) => {
-      builder
-        .where("customers.customer", "Like", `%${search}%`)
-        .orWhere("customers.phone", "Like", `%${search}%`)
-        .orWhere("orders.order_id", "Like", `%${search}%`);
-    });
+    whereStr += " AND (c.customer LIKE ? OR c.phone LIKE ? OR o.order_id LIKE ?)";
+    queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (saleChannel && saleChannel !== "ALL") {
-    query.andWhere("orders.sale_channel", saleChannel);
+    whereStr += " AND o.sale_channel = ?";
+    queryParams.push(saleChannel);
   }
 
   if (fromDate && toDate) {
-    query.andWhereBetween("orders.date", [fromDate, toDate]);
+    whereStr += " AND o.date BETWEEN ? AND ?";
+    queryParams.push(fromDate, toDate);
   } else if (fromDate) {
-    query.andWhere("orders.date", ">=", fromDate);
+    whereStr += " AND o.date >= ?";
+    queryParams.push(fromDate);
   } else if (toDate) {
-    query.andWhere("orders.date", "<=", toDate);
+    whereStr += " AND o.date <= ?";
+    queryParams.push(toDate);
   }
 
-  const salesData = await query;
+  const query = `
+    SELECT 
+      o.date,
+      b.id as branchId,
+      b.name as branchName,
+      o.order_id,
+      c.customer,
+      c.phone,
+      c.address,
+      o.total,
+      o.sub_total,
+      o.vat,
+      o.paid_amount,
+      o.due_amount,
+      o.discount,
+      o.delivery_charge,
+      o.sale_channel,
+      o.supplier_id,
+      s.name as supplierName,
+      COALESCE(oc.cogs_total, 0) as cost_of_goods_sold
+    FROM orders o
+    LEFT JOIN branches b ON o.branch_id = b.id
+    LEFT JOIN customers c ON o.customer_id = c.id
+    LEFT JOIN suppliers s ON o.supplier_id = s.id
+    LEFT JOIN (
+      SELECT order_id, SUM(cogs) as cogs_total
+      FROM order_items
+      GROUP BY order_id
+    ) oc ON oc.order_id = o.id
+    WHERE ${whereStr}
+    ORDER BY o.date DESC
+  `;
+
+  const salesData = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
   logger.info("Sales data fetched successfully");
   return salesData.map((order) => ({
     ...order,
@@ -124,39 +118,39 @@ const getDashboardDateRange = (filter: DashboardFilterType) => {
   }
 
   return null;
-};
+}
 
 export async function getDashboardSalesData(
   filter: DashboardFilterType = "lifetime",
 ): Promise<DashboardSalesData[]> {
-  const cogsSubquery = db("order_items")
-    .select("order_id")
-    .sum({ cogs_total: "cogs" })
-    .groupBy("order_id")
-    .as("order_cogs");
-
-  const query = db("orders")
-    .select(
-      "orders.date",
-      "orders.branch_id as branchId",
-      "orders.total",
-      "orders.due_amount",
-      "orders.paid_amount",
-      db.raw("COALESCE(order_cogs.cogs_total, 0) as cost_of_goods_sold")
-    )
-    .whereIn("orders.status", ["COMPLETED", "EXCHANGED"])
-    .leftJoin(cogsSubquery, "order_cogs.order_id", "orders.id")
-    .orderBy("orders.date", "desc");
+  let whereStr = "o.status IN ('COMPLETED', 'EXCHANGED')";
+  const queryParams: any[] = [];
 
   const range = getDashboardDateRange(filter);
   if (range) {
-    query
-      .andWhere("orders.date", ">=", range.start)
-      .andWhere("orders.date", "<", range.endExclusive);
+    whereStr += " AND o.date >= ? AND o.date < ?";
+    queryParams.push(range.start, range.endExclusive);
   }
 
-  const salesData = await query;
+  const query = `
+    SELECT 
+      o.date,
+      o.branch_id as branchId,
+      o.total,
+      o.due_amount,
+      o.paid_amount,
+      COALESCE(oc.cogs_total, 0) as cost_of_goods_sold
+    FROM orders o
+    LEFT JOIN (
+      SELECT order_id, SUM(cogs) as cogs_total
+      FROM order_items
+      GROUP BY order_id
+    ) oc ON oc.order_id = o.id
+    WHERE ${whereStr}
+    ORDER BY o.date DESC
+  `;
 
+  const salesData = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
   logger.info("Dashboard sales data fetched successfully");
   return salesData.map((order) => ({
     ...order,
@@ -169,43 +163,53 @@ const normalizeNumber = (value: unknown) => Number(value || 0);
 export async function getDashboardSummary(
   filter: DashboardFilterType = "lifetime",
 ): Promise<DashboardSummary> {
-  const cogsSubquery = db("order_items")
-    .select("order_id")
-    .sum({ cogs_total: "cogs" })
-    .groupBy("order_id")
-    .as("order_cogs");
-
-  const baseQuery = db("orders")
-    .whereIn("orders.status", ["COMPLETED", "EXCHANGED"])
-    .leftJoin(cogsSubquery, "order_cogs.order_id", "orders.id");
+  let whereStr = "o.status IN ('COMPLETED', 'EXCHANGED')";
+  const queryParams: any[] = [];
 
   const range = getDashboardDateRange(filter);
   if (range) {
-    baseQuery
-      .andWhere("orders.date", ">=", range.start)
-      .andWhere("orders.date", "<", range.endExclusive);
+    whereStr += " AND o.date >= ? AND o.date < ?";
+    queryParams.push(range.start, range.endExclusive);
   }
 
-  const summaryRow = await baseQuery
-    .clone()
-    .select(
-      db.raw("COUNT(orders.id) as totalOrders"),
-      db.raw("COALESCE(SUM(orders.total), 0) as totalSales"),
-      db.raw("COALESCE(SUM(orders.due_amount), 0) as totalDueAmount"),
-      db.raw("COALESCE(SUM(orders.paid_amount), 0) as totalPaidAmount"),
-      db.raw("COALESCE(SUM(order_cogs.cogs_total), 0) as totalCOGS"),
-    )
-    .first();
+  const summaryQuery = `
+    SELECT 
+      COUNT(o.id) as totalOrders,
+      COALESCE(SUM(o.total), 0) as totalSales,
+      COALESCE(SUM(o.due_amount), 0) as totalDueAmount,
+      COALESCE(SUM(o.paid_amount), 0) as totalPaidAmount,
+      COALESCE(SUM(oc.cogs_total), 0) as totalCOGS
+    FROM orders o
+    LEFT JOIN (
+      SELECT order_id, SUM(cogs) as cogs_total
+      FROM order_items
+      GROUP BY order_id
+    ) oc ON oc.order_id = o.id
+    WHERE ${whereStr}
+  `;
 
-  const branchRows = await baseQuery
-    .clone()
-    .select(
-      "orders.branch_id as branchId",
-      db.raw("COUNT(orders.id) as totalOrders"),
-      db.raw("COALESCE(SUM(orders.total), 0) as totalSales"),
-      db.raw("COALESCE(SUM(order_cogs.cogs_total), 0) as totalCOGS"),
-    )
-    .groupBy("orders.branch_id");
+  const branchQuery = `
+    SELECT 
+      o.branch_id as branchId,
+      COUNT(o.id) as totalOrders,
+      COALESCE(SUM(o.total), 0) as totalSales,
+      COALESCE(SUM(oc.cogs_total), 0) as totalCOGS
+    FROM orders o
+    LEFT JOIN (
+      SELECT order_id, SUM(cogs) as cogs_total
+      FROM order_items
+      GROUP BY order_id
+    ) oc ON oc.order_id = o.id
+    WHERE ${whereStr}
+    GROUP BY o.branch_id
+  `;
+
+  const [summaryRows, branchRows] = await Promise.all([
+    prisma.$queryRawUnsafe<any[]>(summaryQuery, ...queryParams),
+    prisma.$queryRawUnsafe<any[]>(branchQuery, ...queryParams)
+  ]);
+
+  const summaryRow = summaryRows[0];
 
   const branchWiseTotals: DashboardSummary["branchWiseTotals"] = {};
   for (const row of branchRows) {
@@ -228,15 +232,15 @@ export async function getDashboardSummary(
 }
 
 export async function getTotalSalesSummary(): Promise<SalesSummary> {
-  const result = await db("order_items")
-    .select(
-      db.raw("SUM(order_items.price) as total_sale"),
-      db.raw("SUM(order_items.cogs) as total_cogs")
-    )
-    .first();
+  const result = await prisma.$queryRaw<any[]>`
+    SELECT 
+      SUM(price) as total_sale,
+      SUM(cogs) as total_cogs
+    FROM order_items
+  `;
 
   return {
-    totalCOGS: result?.total_cogs || 0,
-    totalSale: result?.total_sale || 0,
+    totalCOGS: Number(result[0]?.total_cogs || 0),
+    totalSale: Number(result[0]?.total_sale || 0),
   };
 }

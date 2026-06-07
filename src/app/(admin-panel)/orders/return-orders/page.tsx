@@ -5,7 +5,7 @@ import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { OrderFilter } from "../orders-list/page";
 import { FilterReturnOrderForm } from "./filter";
 import { Navbar } from "@/components/admin-panel/navbar";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export const revalidate = 0;
 
@@ -31,11 +31,15 @@ export default async function ReturnOrders({ searchParams }: Props) {
 
   const { per_page } = searchParams;
   const limit = typeof per_page === "string" ? parseInt(per_page) : 20;
-  const [result] = await db("orders")
-    .where({ status: "RETURN" })
-    .count("* as total");
-  const totals = Number(result.total);
+
+  const countResult = await prisma.orders.aggregate({
+    _count: { id: true },
+    where: { status: "RETURN" }
+  });
+  
+  const totals = Number(countResult._count.id);
   const pageCount = Math.ceil(totals / limit);
+  
   return (
     <>
       <Navbar title="Return Orders List" />

@@ -6,7 +6,7 @@ import { getSize } from "@/services/size";
 import { createStock, createStockHistory } from "@/services/stock";
 import { logger } from "@/lib/winston";
 import { revalidatePath } from "next/cache";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { Branches } from "@/types/shared";
 
 export async function addStockFormAction(
@@ -21,19 +21,19 @@ export async function addStockFormAction(
     ? await getSize({ where: { id: Number(stockRow.sizeId) } })
     : null;
 
-  await db.transaction(async (trx) => {
+  await prisma.$transaction(async (tx) => {
     for (let i = 0; i < parseInt(stockRow.quantity); i++) {
       await createStock(
         {
           product_id: Number(productId),
           branch_id: Number(branch.id),
           barcode: stockRow.barcode,
-          color_id: color?.id,
-          size_id: size?.id,
+          color_id: color?.id as any,
+          size_id: size?.id as any,
           cost: parseFloat(stockRow.costPerItem),
           quantity: Number(stockRow.quantity),
         },
-        trx
+        tx
       );
     }
     await createStockHistory(
@@ -44,7 +44,7 @@ export async function addStockFormAction(
         quantity: parseInt(stockRow.quantity),
         cost_per_item: parseFloat(stockRow.costPerItem),
       },
-      trx
+      tx
     );
   });
 

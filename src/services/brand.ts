@@ -1,26 +1,26 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function getBrands() {
-  return await db("brands").orderBy("name", "asc");
+  return await prisma.brands.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getBrand(params: { where: { id: number } }) {
-  return await db("brands").where(params.where).first();
+  return await prisma.brands.findFirst({ where: params.where });
 }
 
 export async function createBrand(data: { name: string }) {
-  return await db("brands").insert(data);
+  return await prisma.brands.create({ data });
 }
 
 export async function updateBrand(params: {
   where: { id: number };
   data: { name?: string };
 }) {
-  return await db("brands").where(params.where).update(params.data);
+  return await prisma.brands.update({ where: params.where, data: params.data });
 }
 
 export async function deleteBrand(params: { where: { id: number } }) {
-  return await db("brands").where(params.where).del();
+  return await prisma.brands.delete({ where: params.where });
 }

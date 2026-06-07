@@ -26,7 +26,9 @@ const getLoginErrorMessage = (error: unknown) => {
           : String(error.cause?.err || "");
 
       if (
-        causeMessage.includes("KnexTimeoutError") ||
+        causeMessage.includes("PrismaClientInitializationError") ||
+        causeMessage.includes("PrismaClientKnownRequestError") ||
+        causeMessage.includes("PrismaClientRustPanicError") ||
         causeMessage.includes("ETIMEDOUT") ||
         causeMessage.includes("ECONNREFUSED")
       ) {
@@ -38,7 +40,9 @@ const getLoginErrorMessage = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
 
   if (
-    message.includes("KnexTimeoutError") ||
+    message.includes("PrismaClientInitializationError") ||
+    message.includes("PrismaClientKnownRequestError") ||
+    message.includes("PrismaClientRustPanicError") ||
     message.includes("ETIMEDOUT") ||
     message.includes("ECONNREFUSED") ||
     message.includes("CallbackRouteError") ||

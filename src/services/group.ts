@@ -1,17 +1,16 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { Groups } from "@/types/shared";
 
 export async function getGroups(): Promise<Groups[]> {
-  const groups = await db("groups").select("groups.*").orderBy("name", "asc");
-  return groups;
+  return await prisma.groups.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getGroup(params: {
-  where: { id: number }; // Adjust according to your unique identifier
+  where: { id: number };
 }) {
-  const group = await db("groups").where(params.where).first();
+  const group = await prisma.groups.findFirst({ where: params.where });
   if (!group) {
     throw new Error("Group not found");
   }
@@ -19,33 +18,19 @@ export async function getGroup(params: {
 }
 
 export async function createGroup(data: { name: string }) {
-  const [insertedData] = await db("groups").insert(data);
-  const lastInsertedId = insertedData;
-
-  const [group] = await db("groups").where({ id: lastInsertedId });
-  return group;
+  return await prisma.groups.create({ data });
 }
 
 export async function updateGroup(params: {
-  where: { id: number }; // Adjust according to your unique identifier
-  data: { name?: string }; // Adjust fields as necessary
+  where: { id: number };
+  data: { name?: string };
 }) {
-  const [group] = await db("groups")
-    .where(params.where)
-    .update(params.data)
-    .returning("*");
-  if (!group) {
-    throw new Error("Group not found");
-  }
-  return group;
+  return await prisma.groups.update({ where: params.where, data: params.data });
 }
 
 export async function deleteGroup(params: {
-  where: { id: number }; // Adjust according to your unique identifier
+  where: { id: number };
 }) {
-  const deletedCount = await db("groups").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("Group not found");
-  }
+  await prisma.groups.delete({ where: params.where });
   return { message: "Group deleted successfully" };
 }

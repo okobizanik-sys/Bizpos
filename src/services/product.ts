@@ -1,16 +1,8 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { ProductFilter } from "@/app/(admin-panel)/inventories/products/page";
-
-
-
-
-
-
-
-
 
 export async function getProducts(params: {
   skip?: number;
@@ -20,96 +12,92 @@ export async function getProducts(params: {
 }) {
   const { filter_global, filter } = params.where || {};
 
-  const query = db("products")
-    .select(
-      "products.*",
-      "categories.name as categoryName",
-      "brands.name as brandName",
-      "images.url as imageUrl"
-    )
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .leftJoin("brands", "products.brand_id", "brands.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .orderBy("products.created_at", "desc");
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
+  const countParams: any[] = [];
 
   if (filter_global) {
-    query.where(function () {
-      this.where("products.id", "LIKE", `%${filter_global}%`)
-        .orWhere("products.name", "LIKE", `%${filter_global}%`)
-        .orWhere("products.sku", "LIKE", `%${filter_global}%`);
-    });
+    whereStr += " AND (p.id LIKE ? OR p.name LIKE ? OR p.sku LIKE ?)";
+    queryParams.push(`%${filter_global}%`, `%${filter_global}%`, `%${filter_global}%`);
+    countParams.push(`%${filter_global}%`, `%${filter_global}%`, `%${filter_global}%`);
   }
 
   if (filter) {
-    query.andWhere("categories.name", filter);
+    whereStr += " AND c.name = ?";
+    queryParams.push(filter);
+    countParams.push(filter);
   }
 
-  if (params.orderBy) {
-    params.orderBy.forEach((order) => {
-      Object.entries(order).forEach(([key, value]) => {
-        query.orderBy(key, value);
-      });
-    });
+  let orderStr = "p.created_at DESC";
+  if (params.orderBy && params.orderBy.length > 0) {
+    const orders = params.orderBy.flatMap(o => Object.entries(o).map(([k, v]) => `${k} ${v.toUpperCase()}`));
+    orderStr = orders.join(", ");
   }
 
-  const countQuery = db("products")
-    .count("* as total")
-    .leftJoin("categories", "products.category_id", "categories.id");
-
-  if (filter_global) {
-    countQuery.where(function () {
-      this.where("products.id", "LIKE", `%${filter_global}%`)
-        .orWhere("products.name", "LIKE", `%${filter_global}%`)
-        .orWhere("products.sku", "LIKE", `%${filter_global}%`);
-    });
-  }
-
-  if (filter) {
-    countQuery.andWhere("categories.name", filter);
-  }
-
-  const [{ total }] = await countQuery;
-
-  if (params.skip) {
-    query.offset(params.skip);
-  }
-
+  let limitOffsetStr = "";
   if (params.take) {
-    query.limit(params.take);
+    limitOffsetStr += ` LIMIT ${params.take}`;
+  }
+  if (params.skip) {
+    limitOffsetStr += ` OFFSET ${params.skip}`;
   }
 
-  const products = await query;
+  const query = `
+    SELECT p.*, c.name as categoryName, b.name as brandName, i.url as imageUrl
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN brands b ON p.brand_id = b.id
+    LEFT JOIN images i ON p.image_id = i.id
+    WHERE ${whereStr}
+    ORDER BY ${orderStr}
+    ${limitOffsetStr}
+  `;
 
-  return { products, total: Number(total) };
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+  `;
+
+  const [products, countResult] = await Promise.all([
+    prisma.$queryRawUnsafe<any[]>(query, ...queryParams),
+    prisma.$queryRawUnsafe<any[]>(countQuery, ...countParams)
+  ]);
+
+  const total = countResult[0]?.total ? Number(countResult[0].total) : 0;
+
+  return { products, total };
 }
 
 export async function getProduct(params: any) {
-  const query = db("products")
-    .select(
-      "products.*",
-      "categories.name as categoryName",
-      "brands.name as brandName",
-      "images.url as imageUrl",
-      "stocks.barcode",
-      "stocks.condition",
-      "stocks.product_id",
-      "stocks.quantity",
-      "sizes.name as sizeName",
-      "colors.name as colorName",
-      "branches.name as branchName"
-    )
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .leftJoin("stocks", "stocks.product_id", "products.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("brands", "products.brand_id", "brands.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .where("products.id", params.where.id)
-    .andWhere("stocks.condition", "new")
-    .groupBy("stocks.barcode");
+  const query = `
+    SELECT 
+      p.*, 
+      c.name as categoryName, 
+      b.name as brandName, 
+      i.url as imageUrl,
+      s.barcode, 
+      s.condition, 
+      s.product_id, 
+      s.quantity,
+      sz.name as sizeName, 
+      col.name as colorName, 
+      br.name as branchName
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN brands b ON p.brand_id = b.id
+    LEFT JOIN images i ON p.image_id = i.id
+    LEFT JOIN stocks s ON s.product_id = p.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN branches br ON s.branch_id = br.id
+    WHERE p.id = ? AND s.condition = 'new'
+    GROUP BY s.barcode, p.id, c.name, b.name, i.url, s.condition, s.product_id, s.quantity, sz.name, col.name, br.name
+  `;
 
-  const rows = await query;
+  const rows = await prisma.$queryRawUnsafe<any[]>(query, params.where.id);
+  
   if (!rows || rows.length === 0) {
     return null;
   }
@@ -129,44 +117,40 @@ export async function getProduct(params: any) {
 }
 
 export async function getSelectedProduct(params: any) {
-  const query = db("products")
-    .select(
-      "products.*",
-      "categories.name as categoryName",
-      "brands.name as brandName",
-      "images.url as imageUrl",
-      "stocks.barcode",
-      "stocks.condition",
-      "stocks.product_id",
-      db.raw("COUNT(stocks.id) OVER() as quantity"),
-      "sizes.name as sizeName",
-      "colors.name as colorName",
-      "branches.name as branchName"
-    )
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .leftJoin("stocks", "stocks.product_id", "products.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("brands", "products.brand_id", "brands.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .where("products.id", params.where.id)
-    .groupBy(
-      "stocks.id",
-      "stocks.product_id",
-      "stocks.barcode",
-      "stocks.branch_id",
-      "stocks.color_id",
-      "stocks.size_id"
-    );
+  const query = `
+    SELECT 
+      p.*, 
+      c.name as categoryName, 
+      b.name as brandName, 
+      i.url as imageUrl,
+      s.barcode, 
+      s.condition, 
+      s.product_id, 
+      (SELECT COUNT(st.id) FROM stocks st WHERE st.product_id = p.id) as quantity,
+      sz.name as sizeName, 
+      col.name as colorName, 
+      br.name as branchName
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN brands b ON p.brand_id = b.id
+    LEFT JOIN images i ON p.image_id = i.id
+    LEFT JOIN stocks s ON s.product_id = p.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN branches br ON s.branch_id = br.id
+    WHERE p.id = ?
+    GROUP BY s.id, s.product_id, s.barcode, s.branch_id, s.color_id, s.size_id, p.id, c.name, b.name, i.url, s.condition, sz.name, col.name, br.name
+  `;
 
-  const rows = await query;
+  const rows = await prisma.$queryRawUnsafe<any[]>(query, params.where.id);
+  
   if (!rows || rows.length === 0) {
     return null;
   }
 
   const product = {
     ...rows[0],
+    quantity: Number(rows[0].quantity || 0),
     stocks: rows.map((row) => ({
       barcode: row.barcode,
       size: { name: row.sizeName },
@@ -179,11 +163,7 @@ export async function getSelectedProduct(params: any) {
 }
 
 export async function createProduct(data: any) {
-  const [insertResult] = await db("products").insert(data);
-  const lastInsertId = insertResult;
-
-  const [product] = await db("products").where({ id: lastInsertId });
-
+  const product = await prisma.products.create({ data });
   logger.info(`Product created successfully: ${product.id}`);
   return product;
 }
@@ -201,14 +181,20 @@ export async function updateProduct(
       image_id?: number;
     };
   },
-  trx?: any
+  tx?: any
 ) {
-  const dbs = db || trx;
+  const dbs = tx || prisma;
 
-  await dbs("products").where(params.where).update(params.data);
+  const whereClause = params.where;
+  // Convert any string BigInt ids if needed. If it's id, let's keep it generic.
+  if (whereClause.id && typeof whereClause.id !== 'bigint') {
+    whereClause.id = BigInt(whereClause.id);
+  }
 
-  const updatedProduct = await dbs("products").where(params.where).first();
-  if (!updatedProduct) throw new Error("Product not found after update");
+  const updatedProduct = await dbs.products.update({
+    where: whereClause as any,
+    data: params.data
+  });
 
   logger.info(`Product updated successfully: ${updatedProduct.id}`);
 
@@ -216,11 +202,15 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(where: { [key: string]: any }) {
-  const product = await db("products").where(where).first();
+  if (where.id && typeof where.id !== 'bigint') {
+    where.id = BigInt(where.id);
+  }
+
+  const product = await prisma.products.findFirst({ where });
 
   if (!product) throw new Error("Product not found");
 
-  await db("products").where(where).del();
+  await prisma.products.delete({ where: where as any });
 
   logger.info(`Product deleted successfully: ${product.id}`);
 

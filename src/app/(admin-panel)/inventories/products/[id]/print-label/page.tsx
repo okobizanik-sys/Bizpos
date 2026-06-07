@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import PrintLabelClient from "./print-label-client";
 
 interface Props {
@@ -17,25 +17,23 @@ export default async function PrintLabelPage({ params }: Props) {
 
   const logoUrl = process.env.NEXT_PUBLIC_LOGO_URL || "";
 
-  const product = await db("products")
-    .select("id", "name", "selling_price")
-    .where({ id: productId })
-    .first();
+  const product = await prisma.products.findUnique({
+    where: { id: BigInt(productId) },
+    select: { id: true, name: true, selling_price: true }
+  });
 
   if (!product) {
     notFound();
   }
 
-  const stocks = await db("stocks")
-    .where({ product_id: productId, condition: "new" })
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .select(
-      "stocks.barcode",
-      db.raw("COALESCE(colors.name, '-') as colorName"),
-      db.raw("COALESCE(sizes.name, '-') as sizeName"),
-    )
-    .groupBy("stocks.barcode");
+  const stocks = await prisma.$queryRawUnsafe<any[]>(`
+    SELECT stocks.barcode, COALESCE(colors.name, '-') as colorName, COALESCE(sizes.name, '-') as sizeName
+    FROM stocks
+    LEFT JOIN colors ON stocks.color_id = colors.id
+    LEFT JOIN sizes ON stocks.size_id = sizes.id
+    WHERE stocks.product_id = ? AND stocks.condition = 'new'
+    GROUP BY stocks.barcode, colors.name, sizes.name
+  `, BigInt(productId));
 
   if (stocks.length === 0) {
     return (
@@ -50,9 +48,9 @@ export default async function PrintLabelPage({ params }: Props) {
 
   return (
     <PrintLabelClient
-      productId={product.id}
+      productId={Number(product.id)}
       logoUrl={logoUrl}
-      productName={product.name}
+      productName={product.name as string}
       sellingPrice={Number(product.selling_price)}
       stocks={stocks.map((s) => ({
         barcode: String(s.barcode),

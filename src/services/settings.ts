@@ -1,6 +1,6 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
 import { Settings } from "@/types/shared";
 
@@ -17,34 +17,27 @@ const isSettingsCacheFresh = () =>
 
 const isConnectionError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-
   return (
     message.includes("ETIMEDOUT") ||
     message.includes("ECONNREFUSED") ||
-    message.includes("Knex: Timeout acquiring a connection") ||
-    message.includes("KnexTimeoutError")
+    message.includes("PrismaClientInitializationError") ||
+    message.includes("PrismaClientKnownRequestError")
   );
 };
 
 export async function createSettings(data: Settings) {
-  return await db.transaction(async (trx) => {
+  return await prisma.$transaction(async (tx) => {
     try {
-      const existingSetting = await trx("settings_data").select("*").first();
+      const existingSetting = await tx.settings_data.findFirst();
 
       if (existingSetting) {
-        await trx("settings_data").del();
+        await tx.settings_data.deleteMany();
         logger.info("Existing settings found and deleted.");
       }
 
-      const [insertResult] = await trx("settings_data").insert(data);
-
-      const setting = await trx("settings_data")
-        .where({ id: insertResult })
-        .select("*")
-        .first();
-
+      const setting = await tx.settings_data.create({ data: data as any });
       logger.info(`Settings created successfully: ${setting.id}`);
-      return setting;
+      return setting as unknown as Settings;
     } catch (error) {
       logger.error("Failed to create settings_data:", error);
       throw new Error("Failed to create settings_data");
@@ -58,11 +51,11 @@ export async function getSettings(): Promise<Settings[]> {
   }
 
   try {
-    const settingsData = await db("settings_data").select("*").timeout(4000);
-    cachedSettingsList = settingsData;
-    cachedSetting = settingsData.at(-1) || EMPTY_SETTINGS;
+    const settingsData = await prisma.settings_data.findMany();
+    cachedSettingsList = settingsData as unknown as Settings[];
+    cachedSetting = (settingsData.at(-1) as unknown as Settings) || EMPTY_SETTINGS;
     lastSettingsReadAt = Date.now();
-    return settingsData;
+    return cachedSettingsList;
   } catch (error) {
     logger.error("Failed to read settings_data list:", error);
 
@@ -80,17 +73,14 @@ export async function getSetting(): Promise<Settings> {
   }
 
   try {
-    const setting =
-      (await db("settings_data")
-        .select("*")
-        .orderBy("settings_data.id", "desc")
-        .first()
-        .timeout(4000)) || EMPTY_SETTINGS;
+    const setting = await prisma.settings_data.findFirst({
+      orderBy: { id: "desc" }
+    });
 
-    cachedSetting = setting;
-    cachedSettingsList = setting?.id ? [setting] : cachedSettingsList;
+    cachedSetting = (setting as unknown as Settings) || EMPTY_SETTINGS;
+    cachedSettingsList = setting ? [setting as unknown as Settings] : cachedSettingsList;
     lastSettingsReadAt = Date.now();
-    return setting;
+    return cachedSetting;
   } catch (error) {
     logger.error("Failed to read latest settings_data:", error);
 
@@ -103,26 +93,21 @@ export async function getSetting(): Promise<Settings> {
 }
 
 export async function updateSettings(id: number, data: Settings) {
-  await db("settings_data").update(data).where({ id: id });
-  const setting = await db("settings_data")
-    .where({ id })
-    .select("*")
-    .first();
+  const setting = await prisma.settings_data.update({
+    where: { id },
+    data: data as any,
+  });
 
-  cachedSetting = setting || EMPTY_SETTINGS;
-  cachedSettingsList = setting ? [setting] : EMPTY_SETTINGS_LIST;
+  cachedSetting = (setting as unknown as Settings) || EMPTY_SETTINGS;
+  cachedSettingsList = setting ? [setting as unknown as Settings] : EMPTY_SETTINGS_LIST;
   lastSettingsReadAt = Date.now();
-  return setting;
+  return setting as unknown as Settings;
 }
 
 export async function deleteSettings(id: number) {
-  return await db.transaction(async (trx) => {
+  return await prisma.$transaction(async (tx) => {
     try {
-      const deletedCount = await trx("settings_data").where({ id }).del();
-
-      if (deletedCount === 0) {
-        throw new Error(`No setting found with id: ${id}`);
-      }
+      await tx.settings_data.delete({ where: { id } });
 
       logger.info(`Settings with id ${id} deleted successfully`);
       cachedSetting = EMPTY_SETTINGS;

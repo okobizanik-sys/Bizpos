@@ -5,18 +5,17 @@ import { POSItem } from "../pos/item-selector";
 import {
   decreaseStock,
   increaseStock,
-  updateStockCondition,
 } from "@/services/stock";
 import { logger } from "@/lib/winston";
 import { revalidatePath } from "next/cache";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function DamageProductForm(branch: Branches, itemList: POSItem[]) {
   try {
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       if (branch.id) {
         for (const item of itemList) {
-          await decreaseStock(item.barcode, item.quantity, trx);
+          await decreaseStock(item.barcode, item.quantity, tx);
 
           await increaseStock(
             Number(item.productId),
@@ -24,10 +23,10 @@ export async function DamageProductForm(branch: Branches, itemList: POSItem[]) {
             item.quantity,
             Number(item.cost),
             item.barcode,
-            item.colorId,
-            item.sizeId,
+            item.colorId ? Number(item.colorId) : undefined,
+            item.sizeId ? Number(item.sizeId) : undefined,
             "damaged",
-            trx
+            tx
           );
         }
       }

@@ -1,0 +1,514 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth Tables (NextAuth / @auth/prisma-adapter compatible) ────────────────
+
+model users {
+  id             Int              @id @default(autoincrement()) @db.UnsignedInt
+  name           String?          @db.VarChar(255)
+  email          String           @unique(map: "users_email_unique") @db.VarChar(255)
+  password       String?          @db.VarChar(255)
+  email_verified DateTime?        @db.Timestamp(0)
+  role           users_role       @default(STAFF)
+  phone          String?          @db.VarChar(255)
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?        @default(now()) @db.Timestamp(0)
+  accounts       accounts[]
+  branches_users branches_users[]
+  sessions       sessions[]
+}
+
+model accounts {
+  user_id             Int      @db.UnsignedInt
+  type                String   @db.VarChar(255)
+  provider            String   @db.VarChar(255)
+  provider_account_id String   @db.VarChar(255)
+  refresh_token       String?  @db.VarChar(255)
+  access_token        String?  @db.VarChar(255)
+  expires_at          Int?
+  token_type          String?  @db.VarChar(255)
+  scope               String?  @db.VarChar(255)
+  id_token            String?  @db.VarChar(255)
+  session_state       String?  @db.VarChar(255)
+  created_at          DateTime @default(now()) @db.Timestamp(0)
+  updated_at          DateTime @default(now()) @db.Timestamp(0)
+  users               users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "accounts_user_id_foreign")
+
+  @@id([provider, provider_account_id])
+  @@index([user_id], map: "accounts_user_id_foreign")
+}
+
+model sessions {
+  session_token String   @unique(map: "sessions_session_token_unique") @db.VarChar(255)
+  user_id       Int      @db.UnsignedInt
+  expires       DateTime @db.Timestamp(0)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sessions_user_id_foreign")
+
+  @@index([user_id], map: "sessions_user_id_foreign")
+}
+
+model verification_tokens {
+  identifier String   @db.VarChar(255)
+  token      String   @db.VarChar(255)
+  expires    DateTime @db.Timestamp(0)
+
+  @@id([identifier, token])
+}
+
+// ─── Branch & Users ──────────────────────────────────────────────────────────
+
+model branches {
+  id                                         Int              @id @default(autoincrement()) @db.UnsignedInt
+  name                                       String           @db.VarChar(255)
+  address                                    String           @db.VarChar(255)
+  phone                                      String           @db.VarChar(255)
+  root                                       Boolean?         @default(false)
+  created_at                                 DateTime         @default(now()) @db.Timestamp(0)
+  updated_at                                 DateTime         @default(now()) @db.Timestamp(0)
+  branches_users                             branches_users[]
+  challans_challans_from_branch_idTobranches challans[]       @relation("challans_from_branch_idTobranches")
+  challans_challans_to_branch_idTobranches   challans[]       @relation("challans_to_branch_idTobranches")
+}
+
+model branches_users {
+  branch_id Int      @db.UnsignedInt
+  user_id   Int      @db.UnsignedInt
+  branches  branches @relation(fields: [branch_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "branches_users_branch_id_foreign")
+  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "branches_users_user_id_foreign")
+
+  @@id([branch_id, user_id])
+  @@index([user_id], map: "branches_users_user_id_foreign")
+}
+
+// ─── Product Catalog ─────────────────────────────────────────────────────────
+
+model categories {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model brands {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model colors {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model sizes {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model images {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  url        String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model products {
+  id                BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  name              String?         @db.VarChar(255)
+  sku               String?         @db.VarChar(255)
+  selling_price     Float?          @db.Float
+  description       String?         @db.VarChar(255)
+  category_id       Int?            @db.UnsignedInt
+  brand_id          Int?            @db.UnsignedInt
+  image_id          Int?            @db.UnsignedInt
+  lc_number         String?         @db.VarChar(255)
+  barcode           String?         @unique(map: "products_barcode_unique") @db.VarChar(64)
+  barcode_serial_id BigInt?         @db.UnsignedBigInt
+  created_at        DateTime        @default(now()) @db.Timestamp(0)
+  updated_at        DateTime        @default(now()) @db.Timestamp(0)
+  challan_items     challan_items[]
+
+  @@index([brand_id], map: "products_brand_id_foreign")
+  @@index([category_id], map: "products_category_id_foreign")
+  @@index([image_id], map: "products_image_id_foreign")
+}
+
+model products_colors {
+  product_id BigInt @db.UnsignedBigInt
+  color_id   Int    @db.UnsignedInt
+
+  @@id([product_id, color_id])
+  @@index([color_id], map: "products_colors_color_id_foreign")
+}
+
+model products_sizes {
+  product_id BigInt @db.UnsignedBigInt
+  size_id    Int    @db.UnsignedInt
+
+  @@id([product_id, size_id])
+  @@index([size_id], map: "products_sizes_size_id_foreign")
+}
+
+// ─── Inventory ───────────────────────────────────────────────────────────────
+
+model stocks {
+  id            BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  product_id    BigInt?           @db.UnsignedBigInt
+  branch_id     Int               @default(1) @db.UnsignedInt
+  barcode       String            @db.VarChar(255)
+  color_id      Int?              @db.UnsignedInt
+  size_id       Int?              @db.UnsignedInt
+  cost          Float             @db.Float
+  quantity      Int?
+  condition     stocks_condition? @default(new)
+  sell_count    Int?              @default(0)
+  product_date  DateTime?         @db.Date
+  shelf_life    Int?
+  expire_date   DateTime?         @db.Date
+  supplier_name String?           @db.VarChar(255)
+  created_at    DateTime          @default(now()) @db.Timestamp(0)
+  updated_at    DateTime          @default(now()) @db.Timestamp(0)
+
+  @@index([branch_id], map: "stocks_branch_id_foreign")
+  @@index([color_id], map: "stocks_color_id_foreign")
+  @@index([product_id], map: "stocks_product_id_foreign")
+  @@index([size_id], map: "stocks_size_id_foreign")
+}
+
+model stock_histories {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  product_id     BigInt?   @db.UnsignedBigInt
+  barcode        String    @db.VarChar(255)
+  variant        String?   @db.VarChar(255)
+  quantity       Int
+  cost_per_item  Float     @db.Float
+  paid_amount    Float?    @db.Float
+  due_amount     Float?    @db.Float
+  payment_method String?   @db.VarChar(255)
+  product_date   DateTime? @db.Date
+  shelf_life     Int?
+  expire_date    DateTime? @db.Date
+  supplier_name  String?   @db.VarChar(255)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([product_id], map: "stock_histories_product_id_foreign")
+}
+
+model barcode_serials {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  serial     BigInt
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+// ─── Challans (Branch Transfers) ─────────────────────────────────────────────
+
+model challans {
+  id                                         BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  from_branch_id                             Int?             @db.UnsignedInt
+  to_branch_id                               Int?             @db.UnsignedInt
+  status                                     challans_status? @default(PENDING)
+  quantity                                   Int
+  challan_no                                 String?          @db.VarChar(255)
+  created_at                                 DateTime         @default(now()) @db.Timestamp(0)
+  updated_at                                 DateTime         @default(now()) @db.Timestamp(0)
+  challan_items                              challan_items[]
+  branches_challans_from_branch_idTobranches branches?        @relation("challans_from_branch_idTobranches", fields: [from_branch_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "challans_from_branch_id_foreign")
+  branches_challans_to_branch_idTobranches   branches?        @relation("challans_to_branch_idTobranches", fields: [to_branch_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "challans_to_branch_id_foreign")
+
+  @@index([from_branch_id], map: "challans_from_branch_id_foreign")
+  @@index([to_branch_id], map: "challans_to_branch_id_foreign")
+}
+
+model challan_items {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  challan_id BigInt?   @db.UnsignedBigInt
+  product_id BigInt?   @db.UnsignedBigInt
+  barcode    String    @db.VarChar(255)
+  quantity   Int
+  variant    String?   @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime  @default(now()) @db.Timestamp(0)
+  challans   challans? @relation(fields: [challan_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "challan_items_challan_id_foreign")
+  products   products? @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "challan_items_product_id_foreign")
+
+  @@index([challan_id], map: "challan_items_challan_id_foreign")
+  @@index([product_id], map: "challan_items_product_id_foreign")
+}
+
+// ─── Customers ───────────────────────────────────────────────────────────────
+
+model customers {
+  id            Int              @id @default(autoincrement()) @db.UnsignedInt
+  customer      String           @db.VarChar(255)
+  address       String           @db.VarChar(255)
+  phone         String           @db.VarChar(255)
+  group_id      Int?             @db.UnsignedInt
+  membership_id Int?             @db.UnsignedInt
+  fraud         customers_fraud? @default(false)
+  remarks       String?          @db.VarChar(255)
+  issue_date    DateTime         @default(now()) @db.Timestamp(0)
+  expire_date   DateTime?        @db.Timestamp(0)
+  action        Boolean?
+  created_at    DateTime         @default(now()) @db.Timestamp(0)
+  updated_at    DateTime         @default(now()) @db.Timestamp(0)
+  groups        groups?          @relation(fields: [group_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "customers_group_id_foreign")
+  memberships   memberships?     @relation(fields: [membership_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "customers_membership_id_foreign")
+
+  @@index([group_id], map: "customers_group_id_foreign")
+  @@index([membership_id], map: "customers_membership_id_foreign")
+}
+
+model groups {
+  id         Int         @id @default(autoincrement()) @db.UnsignedInt
+  name       String      @db.VarChar(255)
+  created_at DateTime    @default(now()) @db.Timestamp(0)
+  updated_at DateTime    @default(now()) @db.Timestamp(0)
+  customers  customers[]
+}
+
+model memberships {
+  id         Int         @id @default(autoincrement()) @db.UnsignedInt
+  type       String      @db.VarChar(255)
+  created_at DateTime    @default(now()) @db.Timestamp(0)
+  updated_at DateTime    @default(now()) @db.Timestamp(0)
+  customers  customers[]
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+model orders {
+  id              BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id        String         @unique(map: "orders_order_id_unique") @db.VarChar(255)
+  date            DateTime       @default(now()) @db.Timestamp(0)
+  total           Float          @db.Float
+  status          orders_status? @default(COMPLETED)
+  customer_id     Int?           @db.UnsignedInt
+  branch_id       Int?           @db.UnsignedInt
+  comment         String?        @db.VarChar(255)
+  discount        Int?
+  vat             Int?
+  delivery_charge Int?
+  due_amount      Int?
+  paid_amount     Int?
+  payment_method  String?        @db.VarChar(255)
+  sub_total       Int?
+  sale_channel    String         @default("OFFLINE") @db.VarChar(255)
+  supplier_id     Int?           @db.UnsignedInt
+  action          Boolean?
+  created_at      DateTime       @default(now()) @db.Timestamp(0)
+  updated_at      DateTime       @default(now()) @db.Timestamp(0)
+  order_items     order_items[]
+
+  @@index([branch_id], map: "orders_branch_id_foreign")
+  @@index([customer_id], map: "orders_customer_id_foreign")
+}
+
+model order_items {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id   BigInt?  @db.UnsignedBigInt
+  product_id BigInt?  @db.UnsignedBigInt
+  quantity   Int
+  price      Float    @db.Float
+  barcode    String?  @db.VarChar(255)
+  cogs       Int?
+  color_id   Int?     @db.UnsignedInt
+  size_id    Int?     @db.UnsignedInt
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+  orders     orders?  @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_items_order_id_foreign")
+
+  @@index([color_id], map: "order_items_color_id_foreign")
+  @@index([order_id], map: "order_items_order_id_foreign")
+  @@index([product_id], map: "order_items_product_id_foreign")
+  @@index([size_id], map: "order_items_size_id_foreign")
+}
+
+model order_serials {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  serial     BigInt
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+// ─── Suppliers ───────────────────────────────────────────────────────────────
+
+model suppliers {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  email      String?  @db.VarChar(255)
+  phone      String?  @db.VarChar(255)
+  address    String?  @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model supplier_payments {
+  id                Int      @id @default(autoincrement()) @db.UnsignedInt
+  supplier_id       Int      @db.UnsignedInt
+  amount            Float    @db.Float
+  payment_method_id Int?     @db.UnsignedInt
+  payment_date      DateTime @db.Date
+  notes             String?  @db.Text
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([payment_method_id], map: "supplier_payments_payment_method_id_foreign")
+  @@index([supplier_id], map: "supplier_payments_supplier_id_foreign")
+}
+
+// ─── Settings & Payments ─────────────────────────────────────────────────────
+
+model payment_methods {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model settings {
+  id         Int           @id @default(autoincrement()) @db.UnsignedInt
+  key        String        @unique(map: "settings_key_unique") @db.VarChar(255)
+  value      String        @db.Text
+  type       settings_type
+  created_at DateTime      @default(now()) @db.Timestamp(0)
+  updated_at DateTime      @default(now()) @db.Timestamp(0)
+}
+
+model settings_data {
+  id                    Int      @id @default(autoincrement()) @db.UnsignedInt
+  return_privacy_policy String?  @db.Text
+  logo_image_url        String?  @db.VarChar(255)
+  login_image_url       String?  @db.VarChar(255)
+  vat_rate              Decimal? @db.Decimal(5, 2)
+  created_at            DateTime @default(now()) @db.Timestamp(0)
+  updated_at            DateTime @default(now()) @db.Timestamp(0)
+}
+
+// ─── Misc ────────────────────────────────────────────────────────────────────
+
+model sales {
+  id                 BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id           BigInt?  @unique(map: "sales_order_id_unique") @db.UnsignedBigInt
+  branch_id          Int?     @db.UnsignedInt
+  order_date         DateTime @default(now()) @db.Timestamp(0)
+  customer_id        Int?     @db.UnsignedInt
+  customer_phone     String?  @db.VarChar(255)
+  total_amount       Float    @db.Float
+  cost_of_goods_sold Float?   @db.Float
+  vat                Float?   @db.Float
+  action             Boolean?
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+  updated_at         DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([branch_id], map: "sales_branch_id_foreign")
+  @@index([customer_id], map: "sales_customer_id_foreign")
+}
+
+model account_expenses {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  title      String   @db.VarChar(255)
+  category   String   @db.VarChar(255)
+  amount     Decimal  @default(0.00) @db.Decimal(14, 2)
+  note       String?  @db.Text
+  date       DateTime @db.DateTime(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model tradings {
+  id          Int             @id @default(autoincrement()) @db.UnsignedInt
+  customer_id Int?            @db.UnsignedInt
+  branch_id   Int?            @db.UnsignedInt
+  date        DateTime        @default(now()) @db.DateTime(0)
+  status      tradings_status @default(PENDING)
+  amount      Decimal         @default(0.00) @db.Decimal(15, 2)
+  notes       String?         @db.Text
+  created_at  DateTime        @default(now()) @db.DateTime(0)
+  updated_at  DateTime        @default(now()) @db.DateTime(0)
+
+  @@index([branch_id], map: "idx_branch_id")
+  @@index([customer_id], map: "idx_customer_id")
+}
+
+model client_cart_items {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_ref   String   @db.VarChar(255)
+  product_id BigInt   @db.UnsignedBigInt
+  barcode    String   @db.VarChar(255)
+  quantity   Int      @default(1)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([barcode], map: "client_cart_items_barcode_index")
+  @@index([product_id], map: "client_cart_items_product_id_index")
+  @@index([user_ref], map: "client_cart_items_user_ref_index")
+}
+
+// ─── Knex Migration Tables (kept for compatibility, not used by Prisma) ───────
+model knex_migrations {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  name           String?  @db.VarChar(255)
+  batch          Int?
+  migration_time DateTime @default(now()) @db.Timestamp(0)
+}
+
+model knex_migrations_lock {
+  index     Int  @id @default(autoincrement()) @db.UnsignedInt
+  is_locked Int?
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum users_role {
+  ADMIN
+  STAFF
+}
+
+enum orders_status {
+  COMPLETED
+  EXCHANGED
+  RETURN
+}
+
+enum challans_status {
+  PENDING
+  RECEIVED
+}
+
+enum stocks_condition {
+  new
+  damaged
+}
+
+enum customers_fraud {
+  true
+  false
+}
+
+enum settings_type {
+  number
+  text
+  image
+  json
+}
+
+enum tradings_status {
+  PENDING
+  COMPLETED
+  CANCELLED
+}

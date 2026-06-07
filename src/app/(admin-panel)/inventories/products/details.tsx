@@ -53,7 +53,6 @@ import { deleteProductOnConfirmed, updateProductFormAction } from "./action";
 import { makeFormData } from "@/utils/helpers";
 import { useToast } from "@/components/ui/use-toast";
 import { confirmation } from "@/components/modals/confirm-modal";
-import db from "@/db/database";
 import { ProductList } from "./columns";
 import {
   Brands,

@@ -7,10 +7,10 @@ import { processImage, saveImageBufferToFile } from "@/lib/sharp";
 import { logger } from "@/lib/winston";
 import { revalidatePath } from "next/cache";
 import { Images } from "@/types/shared";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function updateProductFormAction(id: number, formData: FormData) {
-  await db.transaction(async (trx) => {
+  await prisma.$transaction(async (tx) => {
     const data = {
       files: formData.getAll("files") as File[],
       name: formData.get("name") as string,
@@ -24,7 +24,6 @@ export async function updateProductFormAction(id: number, formData: FormData) {
       sku: formData.get("sku") as string,
       description: formData.get("description") as string,
     };
-
 
     let image: Images | undefined = undefined;
 
@@ -52,42 +51,38 @@ export async function updateProductFormAction(id: number, formData: FormData) {
         where: { id },
         data: {
           name: data.name,
-          selling_price: data.sellingPrice,
           sku: data.sku,
+          selling_price: data.sellingPrice,
           description: data.description,
           category_id: data.categoryId,
           brand_id: data.brandId,
           image_id: image?.id,
         },
       },
-      trx
+      tx
     );
 
     if (data.colorIds.length > 0) {
-      await trx("products_colors")
-        .insert(
-          data.colorIds.map((colorId) => ({
-            product_id: product.id,
-            color_id: Number(colorId),
-          }))
-        )
-        .onConflict(["product_id", "color_id"]) // Handle duplicate entries
-        .ignore();
+      await tx.products_colors.createMany({
+        data: data.colorIds.map((colorId) => ({
+          product_id: product.id,
+          color_id: Number(colorId),
+        })),
+        skipDuplicates: true
+      });
       logger.info(
         `Product colors linked successfully for product: ${product.id}`
       );
     }
 
     if (data.sizeIds.length > 0) {
-      await trx("products_sizes")
-        .insert(
-          data.sizeIds.map((sizeId) => ({
-            product_id: product.id,
-            size_id: Number(sizeId),
-          }))
-        )
-        .onConflict(["product_id", "size_id"]) // Handle duplicate entries
-        .ignore();
+      await tx.products_sizes.createMany({
+        data: data.sizeIds.map((sizeId) => ({
+          product_id: product.id,
+          size_id: Number(sizeId),
+        })),
+        skipDuplicates: true
+      });
       logger.info(
         `Product sizes linked successfully for product: ${product.id}`
       );

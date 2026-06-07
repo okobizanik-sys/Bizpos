@@ -85,7 +85,7 @@ export type Branches = {
   name: string;
   address: string;
   phone: string;
-  root?: boolean;
+  root?: boolean | null;
 };
 
 export type Customers = {
@@ -303,7 +303,7 @@ export type ChallanList = {
 };
 
 export type ChallanGetPayload = {
-  id?: number;
+  id?: bigint;
   from_branch_id?: number;
   to_branch_id?: number;
   status: string;
@@ -315,7 +315,7 @@ export type ChallanGetPayload = {
   name?: string;
   barcode?: string;
   variant?: string;
-  product_id?: number;
+  product_id?: bigint;
   challan_no?: string;
   items?: ChallanGetPayload[];
 };
@@ -357,14 +357,14 @@ export type CustomerWithOrders = {
 };
 
 export type ProductColors = {
-  id?: number;
+  id: number;
   name: string;
   product_id: bigint;
   color_id: number;
 };
 
 export type ProductSizes = {
-  id?: number;
+  id: number;
   name: string;
   product_id: bigint;
   size_id: number;

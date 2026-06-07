@@ -1,10 +1,8 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
 import {
-  ensureSalesSchema,
-  ensureSupplierPurchaseSchema,
   getSupplierById,
 } from "@/services/supplier";
 import { revalidatePath } from "next/cache";
@@ -19,9 +17,6 @@ export async function paySupplierDue(
   purchaseId: number,
   payload: PaySupplierDuePayload
 ) {
-  await ensureSalesSchema();
-  await ensureSupplierPurchaseSchema();
-
   const supplier = await getSupplierById(supplierId);
 
   if (!supplier) {
@@ -41,18 +36,17 @@ export async function paySupplierDue(
   }
 
   try {
-    const updated = await db.transaction(async (trx) => {
-      const purchase = await trx("stock_histories")
-        .where({ id: purchaseId })
-        .andWhere("supplier_name", supplier.name)
-        .select(
-          "id",
-          "quantity",
-          "cost_per_item",
-          "paid_amount",
-          "due_amount"
-        )
-        .first();
+    const updated = await prisma.$transaction(async (tx) => {
+      const purchase = await tx.stock_histories.findFirst({
+        where: { id: purchaseId, supplier_name: supplier.name },
+        select: {
+          id: true,
+          quantity: true,
+          cost_per_item: true,
+          paid_amount: true,
+          due_amount: true
+        }
+      });
 
       if (!purchase) {
         throw new Error("Purchase entry not found for this supplier.");
@@ -76,11 +70,14 @@ export async function paySupplierDue(
       const newPaid = currentPaid + amount;
       const newDue = Math.max(currentDue - amount, 0);
 
-      await trx("stock_histories").where({ id: purchaseId }).update({
-        paid_amount: newPaid,
-        due_amount: newDue,
-        payment_method: paymentMethod,
-        updated_at: new Date(),
+      await tx.stock_histories.update({
+        where: { id: purchaseId },
+        data: {
+          paid_amount: newPaid,
+          due_amount: newDue,
+          payment_method: paymentMethod,
+          updated_at: new Date(),
+        }
       });
 
       return { paid_amount: newPaid, due_amount: newDue };

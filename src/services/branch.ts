@@ -1,15 +1,14 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { Branches } from "@/types/shared";
 
 export async function getBranches() {
-  const branches = await db("branches").orderBy("name", "asc");
-  return branches;
+  return await prisma.branches.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getBranchById(id: number) {
-  const branch = await db("branches").where({ id }).first();
+  const branch = await prisma.branches.findFirst({ where: { id } });
   if (!branch) {
     throw new Error("Branch not found");
   }
@@ -17,25 +16,21 @@ export async function getBranchById(id: number) {
 }
 
 export async function createBranch(data: Branches) {
-  const [insertedData] = await db("branches").insert(data);
-  const lastInsertedId = insertedData;
-
-  const [branch] = await db("branches").where({ id: lastInsertedId });
-  return branch;
+  // Omit id if present
+  const { id, ...createData } = data;
+  return await prisma.branches.create({ data: createData });
 }
 
 export async function updateBranch(id: number, data: Branches) {
-  const branch = await db("branches").where({ id }).update(data);
-  if (!branch) {
-    throw new Error("Branch not found");
-  }
+  const { id: _, ...updateData } = data;
+  const branch = await prisma.branches.update({
+    where: { id },
+    data: updateData,
+  });
   return branch;
 }
 
 export async function deleteBranch(id: number) {
-  const deletedCount = await db("branches").where({ id }).del();
-  if (deletedCount === 0) {
-    throw new Error("Branch not found");
-  }
+  await prisma.branches.delete({ where: { id } });
   return { message: "Branch deleted successfully" };
 }

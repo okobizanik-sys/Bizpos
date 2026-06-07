@@ -1,6 +1,6 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
 import { updateChallanStatus } from "@/services/challan";
 import { updateStockBranchId } from "@/services/stock";
@@ -12,9 +12,9 @@ export async function StockReceiveAction(
   challan: Challans | undefined
 ) {
   try {
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       if (challan) {
-        const challanResponse = await updateChallanStatus(challan.id, trx);
+        const challanResponse = await updateChallanStatus(challan.id, tx);
 
         logger.info(`Challan status updated successfully! ${challanResponse}`);
       }
@@ -26,7 +26,7 @@ export async function StockReceiveAction(
             item.to_branch_id,
             item.quantity,
             item.barcode,
-            trx
+            tx
           );
 
           logger.info(`Stock branch ID updated successfully! ${stock}`);

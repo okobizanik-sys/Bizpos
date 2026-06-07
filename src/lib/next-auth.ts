@@ -47,7 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
-          const user = await getUser({ where: { "users.email": email } });
+          const user = await getUser({ where: { email } });
 
           if (!user?.password) {
             return null;

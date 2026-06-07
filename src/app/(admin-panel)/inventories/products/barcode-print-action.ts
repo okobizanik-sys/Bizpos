@@ -1,6 +1,6 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export interface StockForPrint {
   stockId: number;
@@ -13,21 +13,15 @@ export interface StockForPrint {
 }
 
 export async function getStocksForPrint(): Promise<StockForPrint[]> {
-  const rows = await db("stocks")
-    .where("stocks.condition", "new")
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .select(
-      "stocks.id as stockId",
-      "stocks.barcode",
-      "products.name as productName",
-      "products.sku",
-      "products.selling_price",
-      db.raw("COALESCE(colors.name, '-') as colorName"),
-      db.raw("COALESCE(sizes.name, '-') as sizeName"),
-    )
-    .orderBy("products.name", "asc");
+  const rows = await prisma.$queryRawUnsafe<any[]>(`
+    SELECT stocks.id as stockId, stocks.barcode, products.name as productName, products.sku, products.selling_price, COALESCE(colors.name, '-') as colorName, COALESCE(sizes.name, '-') as sizeName
+    FROM stocks
+    LEFT JOIN products ON stocks.product_id = products.id
+    LEFT JOIN colors ON stocks.color_id = colors.id
+    LEFT JOIN sizes ON stocks.size_id = sizes.id
+    WHERE stocks.condition = 'new'
+    ORDER BY products.name ASC
+  `);
 
   return rows.map((r) => ({
     stockId: Number(r.stockId),

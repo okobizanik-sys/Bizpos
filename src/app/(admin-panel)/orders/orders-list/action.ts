@@ -5,7 +5,7 @@ import { getOrderByIdWithItems } from "@/services/order";
 import { Branches, Orders } from "@/types/shared";
 import { OrderWithItem } from "../../pos/item-selector";
 import { revalidatePath } from "next/cache";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function returnOrder(
   formData: FormData,
@@ -13,7 +13,7 @@ export async function returnOrder(
   branch?: Branches
 ) {
   try {
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       const comment = formData.get("comment") || "";
       const ordersId = order?.order_id;
       const branchId = branch?.id as number;
@@ -29,38 +29,43 @@ export async function returnOrder(
               continue;
             }
 
-            const existingStock = await trx("stocks")
-              .where({
-                product_id: Number(item.productId),
+            const existingStock = await tx.stocks.findFirst({
+              where: {
+                product_id: BigInt(item.productId ?? 0),
                 branch_id: branchId,
                 barcode: item.barcode,
-              })
-              .first();
+              }
+            });
 
             if (existingStock) {
-              await trx("stocks")
-                .where({ id: existingStock.id })
-                .update({ quantity: existingStock.quantity + item.quantity });
+              await tx.stocks.update({
+                where: { id: existingStock.id },
+                data: { quantity: Number(existingStock.quantity ?? 0) + item.quantity }
+              });
             } else {
-              await trx("stocks").insert({
-                product_id: Number(item.productId),
-                branch_id: branchId,
-                barcode: item.barcode,
-                color_id: item.colorId ?? null,
-                size_id: item.sizeId ?? null,
-                quantity: item.quantity,
-                cost: Number(item.cost),
-                created_at: new Date(),
-                updated_at: new Date(),
+              await tx.stocks.create({
+                data: {
+                  product_id: BigInt(item.productId ?? 0),
+                  branch_id: branchId,
+                  barcode: item.barcode,
+                  color_id: item.colorId ?? null,
+                  size_id: item.sizeId ?? null,
+                  quantity: item.quantity,
+                  cost: Number(item.cost),
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                  condition: "new"
+                } as any
               });
             }
           }
         }
       }
 
-      await trx("orders")
-        .where({ order_id: ordersId })
-        .update({ status: "RETURN", comment });
+      await tx.orders.updateMany({
+        where: { order_id: ordersId },
+        data: { status: "RETURN", comment: comment as string }
+      });
 
       revalidatePath("/orders/orders-list");
     });

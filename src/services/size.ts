@@ -1,22 +1,25 @@
 "use server";
 
-import db from "@/db/database"; // Adjust the import based on your setup
+import prisma from "@/db/prisma";
+import type { ProductSizes } from "@/types/shared";
 
 export async function getSizes() {
-  return await db("sizes").orderBy("name", "asc");
+  return await prisma.sizes.findMany({ orderBy: { name: "asc" } });
 }
 
-export async function getProductSizes(productId: number) {
-  const sizes = await db("products_sizes")
-    .leftJoin("products", "products_sizes.product_id", "products.id")
-    .leftJoin("sizes", "products_sizes.size_id", "sizes.id")
-    .select("products_sizes.*", "sizes.id", "sizes.name")
-    .where({ product_id: productId });
-  return sizes;
+export async function getProductSizes(productId: number): Promise<ProductSizes[]> {
+  const rawSizes = await prisma.$queryRaw<ProductSizes[]>`
+    SELECT ps.*, s.id, s.name 
+    FROM products_sizes ps
+    LEFT JOIN products p ON ps.product_id = p.id
+    LEFT JOIN sizes s ON ps.size_id = s.id
+    WHERE ps.product_id = ${BigInt(productId)}
+  `;
+  return rawSizes;
 }
 
 export async function getSize(params: { where: { id: number } }) {
-  const size = await db("sizes").where({ id: params.where.id }).first(); // Assuming 'id' is the unique identifier
+  const size = await prisma.sizes.findFirst({ where: { id: params.where.id } });
   if (!size) {
     throw new Error("Size not found");
   }
@@ -24,33 +27,23 @@ export async function getSize(params: { where: { id: number } }) {
 }
 
 export async function createSize(data: { name: string }) {
-  const [size] = await db("sizes").insert(data);
-  return size;
+  return await prisma.sizes.create({ data });
 }
 
 export async function updateSize(params: {
   where: { id: number };
   data: { name: string };
 }) {
-  const insertResult = await db("sizes")
-    .where({ id: params.where.id })
-    .update(params.data);
-
-  const size = await db("sizes").where({ id: insertResult });
-  
-  if (!size) {
-    throw new Error("Size not found");
-  }
+  const size = await prisma.sizes.update({
+    where: { id: params.where.id },
+    data: params.data,
+  });
   return size;
 }
 
 export async function deleteSize(params: { where: { id: number } }) {
-  const deletedSize = await db("sizes")
-    .where({ id: params.where.id })
-    .del()
-    .returning("*"); // Returns the deleted size
-  if (!deletedSize.length) {
-    throw new Error("Size not found");
-  }
-  return deletedSize[0];
+  const size = await prisma.sizes.delete({
+    where: { id: params.where.id },
+  });
+  return size;
 }

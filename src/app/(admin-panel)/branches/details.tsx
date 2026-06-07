@@ -164,7 +164,7 @@ export const BranchDetailsSheet: React.FC<Props> = ({ branch }) => {
                 variant="destructive"
                 onClick={handleDeleteClick}
                 loading={deleting}
-                disabled={branch.root}
+                disabled={!!branch.root}
               >
                 Delete
               </Button>

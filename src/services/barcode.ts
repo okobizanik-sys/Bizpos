@@ -1,17 +1,16 @@
-import db from "@/db/database";
+"use server";
+
+import prisma from "@/db/prisma";
 import { BarcodeSerials } from "@/types/shared";
-import { bigint } from "zod";
 
 export async function createBarcodeSerial(data: BarcodeSerials) {
-  const barcodeSerial = await db("barcode_serials").insert(data);
-
-  return barcodeSerial;
+  return await prisma.barcode_serials.create({ data: data as any });
 }
 
-export async function getBarcodeSerial(): Promise<BarcodeSerials> {
-  const barcodeSerial = await db("barcode_serials")
-    .orderBy("serial", "desc")
-    .first();
+export async function getBarcodeSerial(): Promise<BarcodeSerials | null> {
+  const barcodeSerial = await prisma.barcode_serials.findFirst({
+    orderBy: { serial: "desc" },
+  });
 
-  return barcodeSerial;
+  return barcodeSerial as unknown as BarcodeSerials;
 }

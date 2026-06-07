@@ -1,17 +1,16 @@
-import db from "@/db/database";
+"use server";
+
+import prisma from "@/db/prisma";
 import { OrderSerials } from "@/types/shared";
-import { bigint } from "zod";
 
 export async function createOrderSerial(data: OrderSerials) {
-  const orderSerial = await db("order_serials").insert(data);
-
-  return orderSerial;
+  return await prisma.order_serials.create({ data: data as any });
 }
 
-export async function getOrderSerial(): Promise<OrderSerials> {
-  const orderSerial = await db("order_serials")
-    .orderBy("serial", "desc")
-    .first();
+export async function getOrderSerial(): Promise<OrderSerials | null> {
+  const orderSerial = await prisma.order_serials.findFirst({
+    orderBy: { serial: "desc" },
+  });
 
-  return orderSerial;
+  return orderSerial as unknown as OrderSerials;
 }

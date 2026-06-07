@@ -1,56 +1,47 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
+import type { ProductColors } from "@/types/shared";
 
 export async function getColors() {
-  const colors = await db("colors").orderBy("name", "asc");
-  return colors;
+  return await prisma.colors.findMany({ orderBy: { name: "asc" } });
 }
 
-export async function getProductColors(productId: number) {
-  const colors = await db("products_colors")
-    .leftJoin("products", "products_colors.product_id", "products.id")
-    .leftJoin("colors", "products_colors.color_id", "colors.id")
-    .select("products_colors.*", "colors.id", "colors.name")
-    .where({ product_id: productId });
-  return colors;
+export async function getProductColors(productId: number): Promise<ProductColors[]> {
+  const rawColors = await prisma.$queryRaw<ProductColors[]>`
+    SELECT pc.*, c.id, c.name 
+    FROM products_colors pc
+    LEFT JOIN products p ON pc.product_id = p.id
+    LEFT JOIN colors c ON pc.color_id = c.id
+    WHERE pc.product_id = ${BigInt(productId)}
+  `;
+  return rawColors;
 }
 
 export async function getColor(params: { where: { id: number } }) {
-  const color = await db("colors").where(params.where).first();
+  const color = await prisma.colors.findFirst({ where: params.where });
   if (!color) {
     throw new Error("Color not found");
   }
   return color;
 }
 
-export async function createColor(data: {}) {
-  const [color] = await db("colors").insert(data);
-  return color;
+export async function createColor(data: { name: string }) {
+  return await prisma.colors.create({ data });
 }
 
 export async function updateColor(params: {
-  where: { id: number }; // Adjust the unique field as necessary
-  data: { name?: string /* other fields */ };
+  where: { id: number };
+  data: { name?: string };
 }) {
-  const insertResult = await db("colors")
-    .where(params.where)
-    .update(params.data);
-
-  const color = await db("colors").where({ id: insertResult });
-  
-  if (!color) {
-    throw new Error("Color not found");
-  }
+  const color = await prisma.colors.update({
+    where: params.where,
+    data: params.data,
+  });
   return color;
 }
 
-export async function deleteColor(params: {
-  where: { id: number }; // Adjust the unique field as necessary
-}) {
-  const deletedCount = await db("colors").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("Color not found");
-  }
+export async function deleteColor(params: { where: { id: number } }) {
+  await prisma.colors.delete({ where: params.where });
   return { message: "Color deleted successfully" };
 }

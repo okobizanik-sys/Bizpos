@@ -1,4 +1,4 @@
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
 import type { Supplier } from "@/types/shared";
 
@@ -28,112 +28,30 @@ type SupplierPurchaseSummary = {
   totalItems: number;
 };
 
-export async function ensureSupplierPurchaseSchema() {
-  const [
-    hasSupplierName,
-    hasProductDate,
-    hasShelfLife,
-    hasExpireDate,
-    hasPaidAmount,
-    hasDueAmount,
-    hasPaymentMethod,
-  ] = await Promise.all([
-    db.schema.hasColumn("stock_histories", "supplier_name"),
-    db.schema.hasColumn("stock_histories", "product_date"),
-    db.schema.hasColumn("stock_histories", "shelf_life"),
-    db.schema.hasColumn("stock_histories", "expire_date"),
-    db.schema.hasColumn("stock_histories", "paid_amount"),
-    db.schema.hasColumn("stock_histories", "due_amount"),
-    db.schema.hasColumn("stock_histories", "payment_method"),
-  ]);
-
-  if (
-    !hasSupplierName ||
-    !hasProductDate ||
-    !hasShelfLife ||
-    !hasExpireDate ||
-    !hasPaidAmount ||
-    !hasDueAmount ||
-    !hasPaymentMethod
-  ) {
-    await db.schema.alterTable("stock_histories", function (table) {
-      if (!hasSupplierName) table.string("supplier_name").nullable();
-      if (!hasProductDate) table.date("product_date").nullable();
-      if (!hasShelfLife) table.integer("shelf_life").nullable();
-      if (!hasExpireDate) table.date("expire_date").nullable();
-      if (!hasPaidAmount) table.float("paid_amount").nullable();
-      if (!hasDueAmount) table.float("due_amount").nullable();
-      if (!hasPaymentMethod) table.string("payment_method").nullable();
-    });
-  }
-}
-
-export async function ensureSalesSchema() {
-  const suppliersTableExists = await db.schema.hasTable("suppliers");
-
-  if (!suppliersTableExists) {
-    await db.schema.createTable("suppliers", function (table) {
-      table.increments("id").primary();
-      table.string("name").notNullable();
-      table.string("email").nullable();
-      table.string("phone").nullable();
-      table.text("address").nullable();
-      table.timestamps(true, true);
-    });
-  }
-
-  if (suppliersTableExists) {
-    const hasEmail = await db.schema.hasColumn("suppliers", "email");
-
-    if (!hasEmail) {
-      await db.schema.alterTable("suppliers", function (table) {
-        table.string("email").nullable();
-      });
-    }
-  }
-
-  const [hasSaleChannel, hasSupplierId] = await Promise.all([
-    db.schema.hasColumn("orders", "sale_channel"),
-    db.schema.hasColumn("orders", "supplier_id"),
-  ]);
-
-  if (!hasSaleChannel || !hasSupplierId) {
-    await db.schema.alterTable("orders", function (table) {
-      if (!hasSaleChannel) {
-        table.string("sale_channel").notNullable().defaultTo("OFFLINE");
-      }
-      if (!hasSupplierId) {
-        table.integer("supplier_id").unsigned().nullable();
-      }
-    });
-  }
-}
+// NOTE: ensureSupplierPurchaseSchema and ensureSalesSchema removed as schema is statically managed by Prisma.
 
 export async function getSuppliers(): Promise<Supplier[]> {
-  await ensureSalesSchema();
-
-  return db("suppliers").select("*").orderBy("name", "asc");
+  const suppliers = await prisma.suppliers.findMany({
+    orderBy: { name: "asc" }
+  });
+  return suppliers as unknown as Supplier[];
 }
 
 export async function createSupplier(data: Supplier) {
-  await ensureSalesSchema();
-
-  const [insertResult] = await db("suppliers").insert({
-    name: data.name,
-    email: data.email || null,
-    phone: data.phone || null,
-    address: data.address || null,
+  const supplier = await prisma.suppliers.create({
+    data: {
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || null,
+    }
   });
 
-  const [supplier] = await db("suppliers").where({ id: insertResult });
   logger.info(`Supplier created successfully: ${supplier.id}`);
   return supplier;
 }
 
 export async function updateSupplier(id: number, data: Supplier) {
-  await ensureSalesSchema();
-  await ensureSupplierPurchaseSchema();
-
   const existingSupplier = await getSupplierById(id);
 
   if (!existingSupplier) {
@@ -146,88 +64,100 @@ export async function updateSupplier(id: number, data: Supplier) {
     throw new Error("Supplier name is required.");
   }
 
-  await db.transaction(async (trx) => {
-    await trx("suppliers").where({ id }).update({
-      name,
-      email: data.email || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      updated_at: new Date(),
+  await prisma.$transaction(async (tx) => {
+    await tx.suppliers.update({
+      where: { id },
+      data: {
+        name,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        updated_at: new Date(),
+      }
     });
 
     if (existingSupplier.name !== name) {
-      await trx("stock_histories")
-        .where({ supplier_name: existingSupplier.name })
-        .update({
+      await tx.stock_histories.updateMany({
+        where: { supplier_name: existingSupplier.name },
+        data: {
           supplier_name: name,
           updated_at: new Date(),
-        });
+        }
+      });
     }
   });
 
-  const [supplier] = await db("suppliers").where({ id });
-  logger.info(`Supplier updated successfully: ${supplier.id}`);
+  const supplier = await getSupplierById(id);
+  logger.info(`Supplier updated successfully: ${supplier?.id}`);
   return supplier;
 }
 
 export async function deleteSupplier(id: number) {
-  await ensureSalesSchema();
-
-  await db("orders").where({ supplier_id: id }).update({ supplier_id: null });
-  return db("suppliers").where({ id }).delete();
+  await prisma.$transaction(async (tx) => {
+    await tx.orders.updateMany({
+      where: { supplier_id: id },
+      data: { supplier_id: null }
+    });
+    
+    await tx.suppliers.delete({ where: { id } });
+  });
+  return 1;
 }
 
 export async function getSupplierById(id: number): Promise<Supplier | undefined> {
-  await ensureSalesSchema();
-
-  return db("suppliers").where({ id }).first();
+  const supplier = await prisma.suppliers.findFirst({ where: { id } });
+  return (supplier as unknown as Supplier) || undefined;
 }
 
 export async function getSupplierPurchases(
   id: number,
   filters?: { from?: Date; to?: Date }
 ) {
-  await ensureSalesSchema();
-  await ensureSupplierPurchaseSchema();
-
   const supplier = await getSupplierById(id);
 
   if (!supplier) {
     return null;
   }
 
-  const purchases = (await db("stock_histories")
-    .leftJoin("products", "stock_histories.product_id", "products.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stock_histories.id",
-      "stock_histories.created_at",
-      "stock_histories.barcode",
-      "stock_histories.variant",
-      "stock_histories.quantity",
-      "stock_histories.cost_per_item",
-      "stock_histories.paid_amount",
-      "stock_histories.due_amount",
-      "stock_histories.payment_method",
-      "stock_histories.product_date",
-      "stock_histories.expire_date",
-      "stock_histories.shelf_life",
-      "stock_histories.supplier_name",
-      "products.name as productName",
-      "products.sku as productSku",
-      "categories.name as categoryName"
-    )
-    .where("stock_histories.supplier_name", supplier.name)
-    .modify((query) => {
-      if (filters?.from && filters?.to) {
-        query.whereBetween("stock_histories.created_at", [filters.from, filters.to]);
-      } else if (filters?.from) {
-        query.where("stock_histories.created_at", ">=", filters.from);
-      } else if (filters?.to) {
-        query.where("stock_histories.created_at", "<=", filters.to);
-      }
-    })
-    .orderBy("stock_histories.created_at", "desc")) as SupplierPurchaseRow[];
+  let whereStr = "sh.supplier_name = ?";
+  const queryParams: any[] = [supplier.name];
+
+  if (filters?.from && filters?.to) {
+    whereStr += " AND sh.created_at BETWEEN ? AND ?";
+    queryParams.push(filters.from, filters.to);
+  } else if (filters?.from) {
+    whereStr += " AND sh.created_at >= ?";
+    queryParams.push(filters.from);
+  } else if (filters?.to) {
+    whereStr += " AND sh.created_at <= ?";
+    queryParams.push(filters.to);
+  }
+
+  const purchases = await prisma.$queryRawUnsafe<SupplierPurchaseRow[]>(
+    `SELECT 
+      sh.id,
+      sh.created_at,
+      sh.barcode,
+      sh.variant,
+      sh.quantity,
+      sh.cost_per_item,
+      sh.paid_amount,
+      sh.due_amount,
+      sh.payment_method,
+      sh.product_date,
+      sh.expire_date,
+      sh.shelf_life,
+      sh.supplier_name,
+      p.name as productName,
+      p.sku as productSku,
+      c.name as categoryName
+    FROM stock_histories sh
+    LEFT JOIN products p ON sh.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+    ORDER BY sh.created_at DESC`,
+    ...queryParams
+  );
 
   const summary = purchases.reduce(
     (acc: SupplierPurchaseSummary, item: SupplierPurchaseRow) => {

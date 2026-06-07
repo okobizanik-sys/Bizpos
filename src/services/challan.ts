@@ -1,26 +1,26 @@
 "use server";
 
 import { CreateChallanInput } from "@/app/(admin-panel)/stock-transfer/transfer-products/action";
-import db from "@/db/database";
-import { ChallanItem } from "@/types/shared";
+import prisma from "@/db/prisma";
+import { ChallanGetPayload, ChallanItem, ChallanItems, Challans } from "@/types/shared";
 
 export async function createChallan(data: CreateChallanInput) {
-  const [insertedData] = await db("challans").insert(data);
-  const lastInsertedId = insertedData;
-
-  const [challan] = await db("challans").where({ id: lastInsertedId });
+  const challan = await prisma.challans.create({ data: data as any });
   return challan;
 }
 
 export async function createChallanItem(data: ChallanItem[]) {
-  const insertedData = await db("challan_items").insert(data).returning("id");
+  // Prisma doesn't return created IDs natively on createMany.
+  // Using transaction to create one by one to get them back.
+  const createdItems = await prisma.$transaction(
+    data.map(item => prisma.challan_items.create({ data: item as any }))
+  );
 
-  const challan_items = await db("challan_items").whereIn("id", insertedData);
-  return challan_items;
+  return createdItems;
 }
 
 export async function getChallan(params: { where: { id: bigint } }) {
-  const challan = await db("challans").where(params.where).first();
+  const challan = await prisma.challans.findFirst({ where: params.where });
   if (!challan) {
     throw new Error("Challan not found");
   }
@@ -29,81 +29,93 @@ export async function getChallan(params: { where: { id: bigint } }) {
 
 export async function getChallanItems(params: {
   where: { challan_id: bigint };
-  trx?: any;
-}) {
-  const dbs = db || params.trx;
-  const challanItems = await dbs("challan_items")
-    .leftJoin("challans", "challan_items.challan_id", "challans.id")
-    .leftJoin("products", "challan_items.product_id", "products.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "challan_items.*",
-      "challans.id as challanId",
-      "challans.from_branch_id",
-      "challans.to_branch_id",
-      "challans.status",
-      "challans.challan_no",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "products.category_id",
-      "products.brand_id",
-      "products.image_id",
-      "categories.name as categoryName"
-    )
-    .where(params.where);
+  tx?: any;
+}): Promise<ChallanItems[]> {
+  const dbs = params.tx || prisma;
+  
+  const query = `
+    SELECT 
+      ci.*,
+      c.id as challanId,
+      c.from_branch_id,
+      c.to_branch_id,
+      c.status,
+      c.challan_no,
+      p.name,
+      p.sku,
+      p.selling_price,
+      p.description,
+      p.category_id,
+      p.brand_id,
+      p.image_id,
+      cat.name as categoryName
+    FROM challan_items ci
+    LEFT JOIN challans c ON ci.challan_id = c.id
+    LEFT JOIN products p ON ci.product_id = p.id
+    LEFT JOIN categories cat ON p.category_id = cat.id
+    WHERE ci.challan_id = ?
+  `;
 
+  const challanItems = (await dbs.$queryRawUnsafe(
+    query,
+    params.where.challan_id
+  )) as ChallanItems[];
   return challanItems;
 }
 
-export async function getChallans(params: { where?: { [key: string]: any } }) {
+export async function getChallans(params: {
+  where?: { [key: string]: any };
+}): Promise<Array<Challans & ChallanGetPayload>> {
   const { challan_no, status, created_at } = params.where || {};
 
-  const query = db("challans")
-    .leftJoin(
-      "branches as fromBranch",
-      "challans.from_branch_id",
-      "fromBranch.id"
-    )
-    .leftJoin("branches as toBranch", "challans.to_branch_id", "toBranch.id")
-    .select(
-      "challans.*",
-      "fromBranch.name as from_branch_name",
-      "toBranch.name as to_branch_name"
-    )
-    .orderBy("challans.id", "desc");
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
 
   if (challan_no) {
-    query.andWhere("challans.challan_no", challan_no);
+    whereStr += " AND c.challan_no = ?";
+    queryParams.push(challan_no);
   }
 
   if (status) {
-    query.andWhere("challans.status", status);
+    whereStr += " AND c.status = ?";
+    queryParams.push(status);
   }
 
   if (created_at) {
-    query.whereBetween("challans.updated_at", [created_at.gte, created_at.lte]);
+    whereStr += " AND c.updated_at BETWEEN ? AND ?";
+    queryParams.push(created_at.gte, created_at.lte);
   }
 
-  const challans = await query;
+  const query = `
+    SELECT 
+      c.*,
+      fb.name as from_branch_name,
+      tb.name as to_branch_name
+    FROM challans c
+    LEFT JOIN branches fb ON c.from_branch_id = fb.id
+    LEFT JOIN branches tb ON c.to_branch_id = tb.id
+    WHERE ${whereStr}
+    ORDER BY c.id DESC
+  `;
+
+  const challans = await prisma.$queryRawUnsafe<Array<Challans & ChallanGetPayload>>(query, ...queryParams);
   return challans;
 }
 
 export async function deleteChallan(params: {
-  where: { id: number }; // Adjust the unique field as necessary
+  where: { id: number };
 }) {
-  const deletedCount = await db("challans").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("Challan not found");
-  }
+  await prisma.challans.delete({ where: { id: BigInt(params.where.id) } });
   return { message: "Challan deleted successfully" };
 }
 
-export async function updateChallanStatus(challanId: bigint, trx?: any) {
-  const dbs = db || trx;
-  return await dbs("challans").where({ id: challanId }).update({
-    status: "RECEIVED",
-    updated_at: new Date(),
+export async function updateChallanStatus(challanId: bigint, tx?: any) {
+  const dbs = tx || prisma;
+  return await dbs.challans.update({
+    where: { id: challanId },
+    data: {
+      status: "RECEIVED",
+      updated_at: new Date(),
+    }
   });
 }

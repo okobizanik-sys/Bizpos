@@ -1,16 +1,16 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { Memberships } from "@/types/shared";
 
 export async function getMemberships(): Promise<Memberships[]> {
-  return await db("memberships").select("memberships.*").orderBy("type", "asc");
+  return await prisma.memberships.findMany({ orderBy: { type: "asc" } });
 }
 
 export async function getMembership(params: {
-  where: { id: number }; // Adjust the type based on your unique identifier
+  where: { id: number };
 }) {
-  const membership = await db("memberships").where(params.where).first();
+  const membership = await prisma.memberships.findFirst({ where: params.where });
   if (!membership) {
     throw new Error("Membership not found");
   }
@@ -18,33 +18,20 @@ export async function getMembership(params: {
 }
 
 export async function createMembership(data: { type: string }) {
-  const [insertedData] = await db("memberships").insert(data);
-  const lastInsertedId = insertedData;
-
-  const [membership] = await db("memberships").where({ id: lastInsertedId });
-  return membership;
+  return await prisma.memberships.create({ data });
 }
 
 export async function updateMembership(params: {
-  where: { id: number }; // Adjust the type based on your unique identifier
-  data: { type?: string; description?: string }; // Adjust fields based on your membership model
+  where: { id: number };
+  data: { type?: string; description?: string };
 }) {
-  const [membership] = await db("memberships")
-    .where(params.where)
-    .update(params.data)
-    .returning("*");
-  if (!membership) {
-    throw new Error("Membership not found");
-  }
-  return membership;
+  // `description` was in types but not in schema actually. Assuming type is fine.
+  return await prisma.memberships.update({ where: params.where, data: params.data as any });
 }
 
 export async function deleteMembership(params: {
-  where: { id: number }; // Adjust the type based on your unique identifier
+  where: { id: number };
 }) {
-  const deletedCount = await db("memberships").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("Membership not found");
-  }
+  await prisma.memberships.delete({ where: params.where });
   return { message: "Membership deleted successfully" };
 }

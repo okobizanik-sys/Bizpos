@@ -1,35 +1,23 @@
 "use server";
 
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
 import { PaymentMethods } from "@/types/shared";
 
 export async function createPaymentMethods(data: PaymentMethods) {
-  const [insertResult] = await db("payment_methods").insert(data);
-  const lastInsertId = insertResult;
-
-  const paymentMethod = await db("payment_methods")
-    .where({ id: lastInsertId })
-    .select("*")
-    .first();
-
+  const paymentMethod = await prisma.payment_methods.create({ data: data as any });
   logger.info(`Payment Methods created successfully: ${paymentMethod.id}`);
-  return paymentMethod;
+  return paymentMethod as unknown as PaymentMethods;
 }
 
 export async function getPaymentMethods(): Promise<PaymentMethods[]> {
-  const query = db("payment_methods").select("*");
-
-  const paymentMethods = await query;
-  return paymentMethods;
+  const paymentMethods = await prisma.payment_methods.findMany();
+  return paymentMethods as unknown as PaymentMethods[];
 }
 
 export async function deletePaymentMethod(params: {
-  where: { id: number }; // Adjust the unique field as necessary
+  where: { id: number };
 }) {
-  const deletedCount = await db("payment_methods").where(params.where).del();
-  if (deletedCount === 0) {
-    throw new Error("PaymentMethod not found");
-  }
+  await prisma.payment_methods.delete({ where: params.where });
   return { message: "PaymentMethod deleted successfully" };
 }

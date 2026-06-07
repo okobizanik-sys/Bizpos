@@ -4,22 +4,8 @@ import {
   StockFilter,
   StockSummary,
 } from "@/app/(admin-panel)/inventories/stock-list/page";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 import { logger } from "@/lib/winston";
-
-function applyNullableWhere(query: any, column: string, value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    query.whereNull(column);
-  } else {
-    query.where(column, value);
-  }
-}
-
-function qualifyDistinctColumns(columns?: string[]) {
-  return columns?.map((column) =>
-    column.includes(".") ? column : `stocks.${column}`
-  );
-}
 
 export async function createStock(
   data: {
@@ -36,26 +22,24 @@ export async function createStock(
     expire_date?: string | null;
     supplier_name?: string | null;
   },
-  trx?: any
+  tx?: any
 ) {
-  const dbs = trx || db;
+  const dbs = tx || prisma;
 
-  const existingStock = await dbs("stocks")
-    .where({
-      product_id: data.product_id,
+  const existingStock = await dbs.stocks.findFirst({
+    where: {
+      product_id: BigInt(data.product_id),
       branch_id: data.branch_id,
       barcode: data.barcode,
       condition: data.condition || "new",
-    })
-    .modify((query: any) => {
-      applyNullableWhere(query, "color_id", data.color_id);
-      applyNullableWhere(query, "size_id", data.size_id);
-      applyNullableWhere(query, "supplier_name", data.supplier_name);
-      applyNullableWhere(query, "product_date", data.product_date);
-      applyNullableWhere(query, "shelf_life", data.shelf_life);
-      applyNullableWhere(query, "expire_date", data.expire_date);
-    })
-    .first();
+      color_id: data.color_id || null,
+      size_id: data.size_id || null,
+      supplier_name: data.supplier_name || null,
+      product_date: data.product_date ? new Date(data.product_date) : null,
+      shelf_life: data.shelf_life ?? null,
+      expire_date: data.expire_date ? new Date(data.expire_date) : null,
+    }
+  });
 
   if (existingStock) {
     const newTotalQuantity = existingStock.quantity + data.quantity;
@@ -64,37 +48,40 @@ export async function createStock(
         data.cost * data.quantity) /
       newTotalQuantity;
 
-    await dbs("stocks")
-      .where({ id: existingStock.id })
-      .update({
+    await dbs.stocks.update({
+      where: { id: existingStock.id },
+      data: {
         cost: Math.round(newAverageCost),
         quantity: newTotalQuantity,
-        product_date: data.product_date || null,
+        product_date: data.product_date ? new Date(data.product_date) : null,
         shelf_life: data.shelf_life ?? null,
-        expire_date: data.expire_date || null,
+        expire_date: data.expire_date ? new Date(data.expire_date) : null,
         supplier_name: data.supplier_name || null,
         updated_at: new Date(),
-      });
+      }
+    });
 
     return {
       message: `Stock updated: new quantity ${newTotalQuantity}, new cost ${newAverageCost}`,
     };
   }
 
-  await dbs("stocks").insert({
-    product_id: data.product_id,
-    branch_id: data.branch_id,
-    barcode: data.barcode,
-    color_id: data.color_id,
-    size_id: data.size_id,
-    cost: data.cost,
-    quantity: data.quantity,
-    condition: data.condition || "new",
-    product_date: data.product_date || null,
-    shelf_life: data.shelf_life ?? null,
-    expire_date: data.expire_date || null,
-    supplier_name: data.supplier_name || null,
-    created_at: new Date(),
+  await dbs.stocks.create({
+    data: {
+      product_id: BigInt(data.product_id),
+      branch_id: data.branch_id,
+      barcode: data.barcode,
+      color_id: data.color_id,
+      size_id: data.size_id,
+      cost: data.cost,
+      quantity: data.quantity,
+      condition: data.condition || "new",
+      product_date: data.product_date ? new Date(data.product_date) : null,
+      shelf_life: data.shelf_life ?? null,
+      expire_date: data.expire_date ? new Date(data.expire_date) : null,
+      supplier_name: data.supplier_name || null,
+      created_at: new Date(),
+    }
   });
 
   return { message: "New stock entry added successfully." };
@@ -114,38 +101,42 @@ export async function createStockHistory(
     expire_date?: string | null;
     supplier_name?: string | null;
   },
-  trx?: any
+  tx?: any
 ) {
-  const dbs = trx || db;
-  const [insertResult] = await dbs("stock_histories").insert(data);
-  const lastInsertId = insertResult;
+  const dbs = tx || prisma;
+  const historyData: any = { ...data };
+  if (data.product_date) historyData.product_date = new Date(data.product_date);
+  if (data.expire_date) historyData.expire_date = new Date(data.expire_date);
 
-  const [stockHistory] = await db("stocks").where({ id: lastInsertId });
+  const stockHistory = await dbs.stock_histories.create({ data: historyData });
   return stockHistory;
 }
 
 export async function getStockHistories(params: {
   where?: { created_at?: { gte: Date; lte: Date } };
 }) {
-  const query = db("stock_histories")
-    .select(
-      "stock_histories.*",
-      "products.name as productName",
-      "products.sku as productSku",
-      "categories.name as categoryName"
-    )
-    .leftJoin("products", "stock_histories.product_id", "products.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .orderBy("created_at", "desc");
+  let whereStr = "1=1";
+  const queryParams: any[] = [];
 
   if (params.where?.created_at) {
-    query.whereBetween("stock_histories.created_at", [
-      params.where.created_at.gte,
-      params.where.created_at.lte,
-    ]);
+    whereStr += " AND sh.created_at BETWEEN ? AND ?";
+    queryParams.push(params.where.created_at.gte, params.where.created_at.lte);
   }
 
-  const stockHistory = await query;
+  const query = `
+    SELECT 
+      sh.*,
+      p.name as productName,
+      p.sku as productSku,
+      c.name as categoryName
+    FROM stock_histories sh
+    LEFT JOIN products p ON sh.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+    ORDER BY sh.created_at DESC
+  `;
+
+  const stockHistory = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
   logger.info(`Stock history: ${stockHistory}`);
   return stockHistory;
 }
@@ -153,27 +144,7 @@ export async function getStockHistories(params: {
 export async function getStockHistoriesWithPagination(params: {
   where?: { created_at?: { gte: Date; lte: Date } };
 }) {
-  const query = db("stock_histories")
-    .select(
-      "stock_histories.*",
-      "products.name as productName",
-      "products.sku as productSku",
-      "categories.name as categoryName"
-    )
-    .leftJoin("products", "stock_histories.product_id", "products.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .orderBy("created_at", "desc");
-
-  if (params.where?.created_at) {
-    query.whereBetween("stock_histories.created_at", [
-      params.where.created_at.gte,
-      params.where.created_at.lte,
-    ]);
-  }
-
-  const stockHistory = await query;
-  logger.info(`Stock history: ${stockHistory}`);
-  return stockHistory;
+  return getStockHistories(params); // Implementation is same as above for Prisma query
 }
 
 export async function getStocksByProduct(params: {
@@ -182,36 +153,46 @@ export async function getStocksByProduct(params: {
   page?: number;
   per_page?: number;
 }) {
+  let whereStr = "s.condition = 'new' AND s.branch_id = ?";
+  const queryParams: any[] = [params.where.branchId];
 
-  return (
-    db("stocks")
-      .where("stocks.condition", "new")
-      .leftJoin("products", "stocks.product_id", "products.id")
-      .leftJoin("branches", "stocks.branch_id", "branches.id")
-      .leftJoin("categories", "products.category_id", "categories.id")
-      .leftJoin("images", "products.image_id", "images.id")
-      .leftJoin("colors", "stocks.color_id", "colors.id")
-      .leftJoin("sizes", "stocks.size_id", "sizes.id")
-      .where("stocks.branch_id", params.where.branchId)
-      .modify((query) => {
-        if (params.filters?.search) {
-          query.where("products.name", "like", `%${params.filters.search}%`);
-        }
-      })
-      .select(
-        "stocks.*",
-        "products.id as productId",
-        "branches.id as branchId",
-        "branches.name as branchName",
-        "products.name",
-        "products.sku",
-        "products.selling_price",
-        "categories.name as categoryName",
-        "colors.name as colorName",
-        "sizes.name as sizeName",
-        "images.url"
-      )
-  );
+  if (params.filters?.search) {
+    whereStr += " AND p.name LIKE ?";
+    queryParams.push(`%${params.filters.search}%`);
+  }
+
+  let limitOffsetStr = "";
+  if (params.per_page) {
+    const page = params.page || 1;
+    const offset = (page - 1) * params.per_page;
+    limitOffsetStr = `LIMIT ${params.per_page} OFFSET ${offset}`;
+  }
+
+  const query = `
+    SELECT 
+      s.*,
+      p.id as productId,
+      b.id as branchId,
+      b.name as branchName,
+      p.name,
+      p.sku,
+      p.selling_price,
+      c.name as categoryName,
+      col.name as colorName,
+      sz.name as sizeName,
+      i.url
+    FROM stocks s
+    LEFT JOIN products p ON s.product_id = p.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN images i ON p.image_id = i.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    WHERE ${whereStr}
+    ${limitOffsetStr}
+  `;
+
+  return await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
 }
 
 export async function getStocksByProductWithPagination(params: {
@@ -221,149 +202,103 @@ export async function getStocksByProductWithPagination(params: {
   per_page?: number;
 }) {
   const { page = 1, per_page = 10 } = params;
-  const offset = (page - 1) * per_page;
+  return getStocksByProduct({ ...params, page, per_page });
+}
 
-  return db("stocks")
-    .where("stocks.condition", "new")
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .leftJoin("images", "products.image_id", "images.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .where("stocks.branch_id", params.where.branchId)
-    .modify((query) => {
-      if (params.filters?.search) {
-        query.where("products.name", "like", `%${params.filters.search}%`);
-      }
-    })
-    .limit(per_page)
-    .offset(offset)
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "branches.id as branchId",
-      "branches.name as branchName",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "categories.name as categoryName",
-      "colors.name as colorName",
-      "sizes.name as sizeName",
-      "images.url"
-    );
+function buildStocksQuery(params: { where: { [key: string]: any }; distinct?: string[]; condition?: string }) {
+  let whereStr = `s.condition = '${params.condition || "new"}'`;
+  const queryParams: any[] = [];
+
+  for (const [key, value] of Object.entries(params.where)) {
+    if (key === 'branch_id') {
+      whereStr += ` AND s.branch_id = ?`;
+    } else if (key === 'product_id') {
+      whereStr += ` AND s.product_id = ?`;
+    } else if (key === 'barcode') {
+      whereStr += ` AND s.barcode = ?`;
+    } else {
+      whereStr += ` AND ${key} = ?`;
+    }
+    queryParams.push(value);
+  }
+
+  return { whereStr, queryParams };
 }
 
 export async function getStocks(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const stocksQuery = db("stocks")
-    .where({ ...params.where, condition: "new" })
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "colors.id as colorId",
-      "colors.name as colorName",
-      "sizes.id as sizeId",
-      "sizes.name as sizeName",
-      "branches.name as branchName",
-      "branches.id as branchId",
-      "categories.name as categoryName"
-    )
-    .groupBy("stocks.barcode");
+  const { whereStr, queryParams } = buildStocksQuery({ where: params.where, condition: "new" });
 
-  const distinctColumns = qualifyDistinctColumns(params.distinct);
-  if (distinctColumns) {
-    stocksQuery.distinct(distinctColumns);
-  }
+  const query = `
+    SELECT 
+      s.*,
+      p.id as productId,
+      p.name,
+      p.sku,
+      p.selling_price,
+      p.description,
+      col.id as colorId,
+      col.name as colorName,
+      sz.id as sizeId,
+      sz.name as sizeName,
+      b.name as branchName,
+      b.id as branchId,
+      c.name as categoryName
+    FROM stocks s
+    LEFT JOIN products p ON s.product_id = p.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+    GROUP BY s.barcode, s.id, p.id, col.id, sz.id, b.id, c.id
+  `;
 
-  const stocks = await stocksQuery;
-  return stocks;
+  return await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
 }
 
 export async function getStocksWithPagination(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const stocksQuery = db("stocks")
-    .where({ ...params.where, condition: "new" })
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "colors.id as colorId",
-      "colors.name as colorName",
-      "sizes.id as sizeId",
-      "sizes.name as sizeName",
-      "branches.name as branchName",
-      "branches.id as branchId",
-      "categories.name as categoryName"
-    )
-    .groupBy("stocks.barcode");
-
-  const distinctColumns = qualifyDistinctColumns(params.distinct);
-  if (distinctColumns) {
-    stocksQuery.distinct(distinctColumns);
-  }
-
-  const stocks = await stocksQuery;
-  return stocks;
+  return getStocks(params);
 }
 
 export async function getDamagedStocks(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const stocksQuery = db("stocks")
-    .where({ ...params.where, condition: "damaged" })
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "colors.id as colorId",
-      "colors.name as colorName",
-      "sizes.id as sizeId",
-      "sizes.name as sizeName",
-      "branches.name as branchName",
-      "branches.id as branchId",
-      "categories.name as categoryName"
-    )
-    .groupBy("stocks.barcode")
-    .orderBy("created_at", "desc");
+  const { whereStr, queryParams } = buildStocksQuery({ where: params.where, condition: "damaged" });
 
-  const distinctColumns = qualifyDistinctColumns(params.distinct);
-  if (distinctColumns) {
-    stocksQuery.distinct(distinctColumns);
-  }
+  const query = `
+    SELECT 
+      s.*,
+      p.id as productId,
+      p.name,
+      p.sku,
+      p.selling_price,
+      p.description,
+      col.id as colorId,
+      col.name as colorName,
+      sz.id as sizeId,
+      sz.name as sizeName,
+      b.name as branchName,
+      b.id as branchId,
+      c.name as categoryName
+    FROM stocks s
+    LEFT JOIN products p ON s.product_id = p.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+    GROUP BY s.barcode, s.id, p.id, col.id, sz.id, b.id, c.id
+    ORDER BY s.created_at DESC
+  `;
 
-  const stocks = await stocksQuery;
-  return stocks;
+  return await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
 }
 
 export async function getExpiredStocks(params: {
@@ -371,109 +306,72 @@ export async function getExpiredStocks(params: {
   distinct?: string[];
 }) {
   const today = new Date().toISOString().slice(0, 10);
+  const { whereStr, queryParams } = buildStocksQuery({ where: params.where || {}, condition: "new" });
 
-  const stocksQuery = db("stocks")
-    .where({ ...(params.where || {}), condition: "new" })
-    .whereNotNull("stocks.expire_date")
-    .andWhere("stocks.expire_date", "<", today)
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "colors.id as colorId",
-      "colors.name as colorName",
-      "sizes.id as sizeId",
-      "sizes.name as sizeName",
-      "branches.name as branchName",
-      "branches.id as branchId",
-      "categories.name as categoryName"
-    )
-    .groupBy("stocks.barcode")
-    .orderBy("stocks.expire_date", "asc");
+  const query = `
+    SELECT 
+      s.*,
+      p.id as productId,
+      p.name,
+      p.sku,
+      p.selling_price,
+      p.description,
+      col.id as colorId,
+      col.name as colorName,
+      sz.id as sizeId,
+      sz.name as sizeName,
+      b.name as branchName,
+      b.id as branchId,
+      c.name as categoryName
+    FROM stocks s
+    LEFT JOIN products p ON s.product_id = p.id
+    LEFT JOIN colors col ON s.color_id = col.id
+    LEFT JOIN sizes sz ON s.size_id = sz.id
+    LEFT JOIN branches b ON s.branch_id = b.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+      AND s.expire_date IS NOT NULL
+      AND s.expire_date < ?
+    GROUP BY s.barcode, s.id, p.id, col.id, sz.id, b.id, c.id
+    ORDER BY s.expire_date ASC
+  `;
 
-  const distinctColumns = qualifyDistinctColumns(params.distinct);
-  if (distinctColumns) {
-    stocksQuery.distinct(distinctColumns);
-  }
-
-  const stocks = await stocksQuery;
-  return stocks;
+  return await prisma.$queryRawUnsafe<any[]>(query, ...queryParams, today);
 }
 
 export async function getDamagedStocksWithPagination(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const stocksQuery = db("stocks")
-    .where({ ...params.where, condition: "damaged" })
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .leftJoin("colors", "stocks.color_id", "colors.id")
-    .leftJoin("sizes", "stocks.size_id", "sizes.id")
-    .leftJoin("branches", "stocks.branch_id", "branches.id")
-    .leftJoin("categories", "products.category_id", "categories.id")
-    .select(
-      "stocks.*",
-      "products.id as productId",
-      "products.name",
-      "products.sku",
-      "products.selling_price",
-      "products.description",
-      "colors.id as colorId",
-      "colors.name as colorName",
-      "sizes.id as sizeId",
-      "sizes.name as sizeName",
-      "branches.name as branchName",
-      "branches.id as branchId",
-      "categories.name as categoryName"
-    )
-    .groupBy("stocks.barcode")
-    .orderBy("created_at", "desc");
-
-  const distinctColumns = qualifyDistinctColumns(params.distinct);
-  if (distinctColumns) {
-    stocksQuery.distinct(distinctColumns);
-  }
-
-  const stocks = await stocksQuery;
-  return stocks;
+  return getDamagedStocks(params);
 }
 
 export async function getStocksCount(params: {
-  where: { [key: string]: any }; // Adjust according to your filtering needs
+  where: { [key: string]: any };
 }): Promise<number> {
-  const stock = await db("stocks")
-    .sum<{ total_quantity?: number | string }[]>("quantity as total_quantity")
-    .where(params.where)
-    .first();
+  const stock = await prisma.stocks.aggregate({
+    _sum: { quantity: true },
+    where: params.where
+  });
 
-  return stock?.total_quantity ? Number(stock.total_quantity) : 0;
+  return Number(stock._sum.quantity || 0);
 }
 
 export async function getTotalStockSummary(): Promise<StockSummary> {
-  const result = await db("stocks")
-    .leftJoin("products", "stocks.product_id", "products.id")
-    .select(
-      db.raw("SUM(stocks.quantity) as total_quantity"),
-      db.raw("SUM(stocks.quantity * stocks.cost) as total_stock_value"),
-      db.raw(
-        "SUM(stocks.quantity * products.selling_price) as total_sell_value"
-      )
-    )
-    .where({ condition: "new" })
-    .first();
+  const result = await prisma.$queryRaw<any[]>`
+    SELECT 
+      SUM(s.quantity) as total_quantity,
+      SUM(s.quantity * s.cost) as total_stock_value,
+      SUM(s.quantity * p.selling_price) as total_sell_value
+    FROM stocks s
+    LEFT JOIN products p ON s.product_id = p.id
+    WHERE s.condition = 'new'
+  `;
 
   return {
-    totalQuantity: result?.total_quantity || 0,
-    totalStockValue: Math.round(result?.total_stock_value) || 0,
-    totalSellValue: Math.round(result?.total_sell_value) || 0,
+    totalQuantity: Number(result[0]?.total_quantity || 0),
+    totalStockValue: Math.round(Number(result[0]?.total_stock_value || 0)),
+    totalSellValue: Math.round(Number(result[0]?.total_sell_value || 0)),
   };
 }
 
@@ -488,52 +386,62 @@ export type InventoryAlertSummary = {
 export async function getInventoryAlertSummary(): Promise<InventoryAlertSummary> {
   const today = new Date().toISOString().slice(0, 10);
 
+  const damagedQuery = `
+    SELECT 
+      COALESCE(SUM(quantity), 0) as damaged_quantity,
+      COALESCE(SUM(quantity * cost), 0) as damaged_value
+    FROM stocks
+    WHERE \`condition\` = 'damaged'
+  `;
+
+  const returnedQuery = `
+    SELECT COALESCE(SUM(oi.quantity), 0) as return_quantity
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.status = 'RETURN'
+  `;
+
+  const expiredQuery = `
+    SELECT 
+      COALESCE(SUM(quantity), 0) as expired_quantity,
+      COALESCE(SUM(quantity * cost), 0) as expired_value
+    FROM stocks
+    WHERE \`condition\` = 'new' 
+      AND expire_date IS NOT NULL 
+      AND expire_date < ?
+  `;
+
   const [damagedRow, returnedRow, expiredRow] = await Promise.all([
-    db("stocks")
-      .select(
-        db.raw("COALESCE(SUM(stocks.quantity), 0) as damaged_quantity"),
-        db.raw("COALESCE(SUM(stocks.quantity * stocks.cost), 0) as damaged_value")
-      )
-      .where({ condition: "damaged" })
-      .first(),
-    db("orders")
-      .leftJoin("order_items", "orders.id", "order_items.order_id")
-      .select(db.raw("COALESCE(SUM(order_items.quantity), 0) as return_quantity"))
-      .where("orders.status", "RETURN")
-      .first(),
-    db("stocks")
-      .select(
-        db.raw("COALESCE(SUM(stocks.quantity), 0) as expired_quantity"),
-        db.raw("COALESCE(SUM(stocks.quantity * stocks.cost), 0) as expired_value")
-      )
-      .where("stocks.condition", "new")
-      .whereNotNull("stocks.expire_date")
-      .where("stocks.expire_date", "<", today)
-      .first(),
+    prisma.$queryRawUnsafe<any[]>(damagedQuery),
+    prisma.$queryRawUnsafe<any[]>(returnedQuery),
+    prisma.$queryRawUnsafe<any[]>(expiredQuery, today),
   ]);
 
   return {
-    damagedQuantity: Number(damagedRow?.damaged_quantity || 0),
-    damagedValue: Math.round(Number(damagedRow?.damaged_value || 0)),
-    returnQuantity: Number(returnedRow?.return_quantity || 0),
-    expiredQuantity: Number(expiredRow?.expired_quantity || 0),
-    expiredValue: Math.round(Number(expiredRow?.expired_value || 0)),
+    damagedQuantity: Number(damagedRow[0]?.damaged_quantity || 0),
+    damagedValue: Math.round(Number(damagedRow[0]?.damaged_value || 0)),
+    returnQuantity: Number(returnedRow[0]?.return_quantity || 0),
+    expiredQuantity: Number(expiredRow[0]?.expired_quantity || 0),
+    expiredValue: Math.round(Number(expiredRow[0]?.expired_value || 0)),
   };
 }
 
 export async function decreaseStock(
   barcode: string,
   quantity: number,
-  trx?: any
+  tx?: any
 ) {
-  const dbs = trx || db;
-  const stockItem = await dbs("stocks").where({ barcode }).first();
+  const dbs = tx || prisma;
+  const stockItem = await dbs.stocks.findFirst({ where: { barcode } });
 
   if (!stockItem || stockItem.quantity < quantity) {
     throw new Error("Insufficient stock");
   }
 
-  await dbs("stocks").where({ barcode }).decrement("quantity", quantity);
+  await dbs.stocks.updateMany({
+    where: { barcode },
+    data: { quantity: { decrement: quantity } }
+  });
 }
 
 export async function increaseStock(
@@ -545,23 +453,23 @@ export async function increaseStock(
   colorId?: number,
   sizeId?: number,
   condition?: string,
-  trx?: any
+  tx?: any
 ) {
-  const dbs = trx || db;
+  const dbs = tx || prisma;
 
-
-
-  const increasedStock = await dbs("stocks").insert({
-    product_id: productId,
-    branch_id: branchId,
-    color_id: colorId,
-    size_id: sizeId,
-    quantity,
-    cost,
-    barcode,
-    condition: condition,
-    created_at: new Date(),
-    updated_at: new Date(),
+  const increasedStock = await dbs.stocks.create({
+    data: {
+      product_id: BigInt(productId),
+      branch_id: branchId,
+      color_id: colorId,
+      size_id: sizeId,
+      quantity,
+      cost,
+      barcode,
+      condition: condition || "new",
+      created_at: new Date(),
+      updated_at: new Date(),
+    }
   });
 
   return increasedStock;
@@ -572,76 +480,108 @@ export async function updateStockCondition(itemIds: bigint[]) {
     throw new Error("No items provided to update");
   }
 
-  const itemIdsAsString = itemIds.map((id) => id.toString());
-
-  await db("stocks").whereIn("id", itemIdsAsString).update({
-    condition: "damaged",
-    updated_at: new Date(),
+  await prisma.stocks.updateMany({
+    where: { id: { in: itemIds } },
+    data: {
+      condition: "damaged",
+      updated_at: new Date(),
+    }
   });
 }
 
 export async function updateStockBranchId(
-  challanId: bigint,
+  _challanId: bigint,
   toBranchId: number,
   quantity: number,
   barcode: string,
-  trx?: any
+  tx?: any
 ) {
-  const dbs = db || trx;
-
-  const stockEntries = await dbs("stocks")
-    .where("barcode", barcode)
-    .andWhere("branch_id", "<>", toBranchId)
-    .orderBy("updated_at", "asc")
-    .select("id", "quantity");
-
-  let remainingQuantity = quantity;
-
-  for (const stock of stockEntries) {
-    if (remainingQuantity <= 0) break;
-
-    const updateQty = Math.min(stock.quantity, remainingQuantity);
-    remainingQuantity -= updateQty;
-
-    await dbs("stocks")
-      .where("id", stock.id)
-      .update({
-        quantity: stock.quantity - updateQty,
-        updated_at: new Date(),
-      });
-
-    const existingStock = await dbs("stocks")
-      .where({ barcode, branch_id: toBranchId })
-      .first();
-
-    if (existingStock) {
-      await dbs("stocks")
-        .where("id", existingStock.id)
-        .update({
-          quantity: existingStock.quantity + updateQty,
-          updated_at: new Date(),
-        });
-    } else {
-      await dbs("stocks").insert({
+  const moveStock = async (prismaTx: any) => {
+    const stockEntries = await prismaTx.stocks.findMany({
+      where: { 
         barcode,
-        branch_id: toBranchId,
-        quantity: updateQty,
-        updated_at: new Date(),
-        created_at: new Date(),
+        branch_id: { not: toBranchId }
+      },
+      orderBy: { updated_at: 'asc' },
+      select: {
+        id: true,
+        product_id: true,
+        barcode: true,
+        color_id: true,
+        size_id: true,
+        cost: true,
+        quantity: true,
+        condition: true,
+      }
+    });
+
+    let remainingQuantity = quantity;
+
+    for (const stock of stockEntries) {
+      if (remainingQuantity <= 0) break;
+
+      const currentQuantity = Number(stock.quantity ?? 0);
+      const updateQty = Math.min(currentQuantity, remainingQuantity);
+      remainingQuantity -= updateQty;
+
+      await prismaTx.stocks.update({
+        where: { id: stock.id },
+        data: {
+          quantity: currentQuantity - updateQty,
+          updated_at: new Date(),
+        }
       });
+
+      const existingStock = await prismaTx.stocks.findFirst({
+        where: { barcode, branch_id: toBranchId }
+      });
+
+      if (existingStock) {
+        await prismaTx.stocks.update({
+          where: { id: existingStock.id },
+          data: {
+            quantity: Number(existingStock.quantity ?? 0) + updateQty,
+            updated_at: new Date(),
+          }
+        });
+      } else {
+        await prismaTx.stocks.create({
+          data: {
+            barcode,
+            branch_id: toBranchId,
+            quantity: updateQty,
+            product_id: stock.product_id,
+            cost: stock.cost,
+            color_id: stock.color_id,
+            size_id: stock.size_id,
+            condition: stock.condition,
+            updated_at: new Date(),
+            created_at: new Date(),
+          }
+        });
+      }
     }
+  };
+
+  if (tx) {
+    await moveStock(tx);
+  } else {
+    await prisma.$transaction(moveStock);
   }
 }
 
 export async function updateStockQuantity(
   quantity: number,
   barcode: string,
-  trx?: any
+  tx?: any
 ) {
-  const dbs = db || trx;
+  const dbs = tx || prisma;
 
-  await dbs("stocks").where("stocks.barcode", barcode).update({
-    quantity: quantity,
-    updated_at: new Date(),
+  await dbs.stocks.updateMany({
+    where: { barcode },
+    data: {
+      quantity: quantity,
+      updated_at: new Date(),
+    }
   });
 }

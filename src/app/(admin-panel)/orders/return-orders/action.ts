@@ -1,18 +1,16 @@
 "use server";
 
 import { logger } from "@/lib/winston";
-import { getOrderByIdWithItems } from "@/services/order";
-import { Branches, Orders } from "@/types/shared";
 import { OrderWithItem } from "../../pos/item-selector";
 import { revalidatePath } from "next/cache";
-import db from "@/db/database";
+import prisma from "@/db/prisma";
 
 export async function returnOrderUndo(
   orderData: OrderWithItem[] | null,
   ordersId: string
 ) {
   try {
-    await db.transaction(async (trx) => {
+    await prisma.$transaction(async (tx) => {
       if (orderData) {
         for (const orderItem of orderData) {
           for (const item of orderItem.items) {
@@ -20,19 +18,20 @@ export async function returnOrderUndo(
               continue; // Skip if barcode is missing
             }
 
-            const existingStock = await trx("stocks")
-              .where({
-                product_id: Number(item.productId),
+            const existingStock = await tx.stocks.findFirst({
+              where: {
+                product_id: BigInt(item.productId ?? 0),
                 barcode: item.barcode,
-              })
-              .first();
+              }
+            });
 
             if (existingStock) {
-              await trx("stocks")
-                .where({ id: existingStock.id })
-                .update({
-                  quantity: existingStock.quantity - item.quantity,
-                });
+              await tx.stocks.update({
+                where: { id: existingStock.id },
+                data: {
+                  quantity: Number(existingStock.quantity ?? 0) - item.quantity,
+                }
+              });
             } else {
               logger.error(
                 `No stock found for product ${item.productId} with barcode ${item.barcode}.`
@@ -43,9 +42,10 @@ export async function returnOrderUndo(
         }
       }
 
-      await trx("orders")
-        .where({ order_id: ordersId })
-        .update({ status: "COMPLETED", comment: "" });
+      await tx.orders.updateMany({
+        where: { order_id: ordersId },
+        data: { status: "COMPLETED", comment: "" }
+      });
     });
 
     revalidatePath("/orders/orders-list");
