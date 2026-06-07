@@ -4,7 +4,7 @@ import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { Customers, CustomerWithOrders } from "@/types/shared";
 import { CustomerFilter } from "@/app/(admin-panel)/customers/customers-list/page";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma";
 
 export interface CustomerWithRelations {
   id: number;
