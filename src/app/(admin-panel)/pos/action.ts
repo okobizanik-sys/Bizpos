@@ -154,14 +154,21 @@ export async function updateBillDetails(
         address: toUpperCaseWords(String(formData.get("address"))),
       };
 
-      const customerId = customerData?.customerId as number;
+      let customerId = customerData?.customerId as number;
 
-      await tx.customers.update({
-        where: { id: customerId },
-        data: customersData
-      });
-      const customer = await tx.customers.findUnique({ where: { id: customerId } });
-      logger.info(`Customer updated: ${customer}`);
+      // If customerId is not provided, create a new customer
+      if (!customerId) {
+        const newCustomer = await tx.customers.create({ data: customersData });
+        customerId = newCustomer.id;
+        logger.info(`New customer created: ${newCustomer.id}`);
+      } else {
+        // Update existing customer if customerId is provided
+        await tx.customers.update({
+          where: { id: customerId },
+          data: customersData
+        });
+        logger.info(`Customer updated: ${customerId}`);
+      }
 
       const { calculateExgTotals, subExgTotal, deliveryCharge } =
         usePOSStore.getState();
@@ -333,7 +340,7 @@ export async function updateBillDetails(
       revalidatePath("/customers/fraud-customers");
       revalidatePath("/customers/customers-data");
 
-      return { customer };
+      return { customerId };
     });
   } catch (error) {
     logger.error(`Error in updateBillDetails: ${error}`);

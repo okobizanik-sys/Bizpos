@@ -4,7 +4,7 @@ import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { DashboardSalesData, SalesData, SalesSummary } from "@/types/shared";
 import { OrderFilter } from "@/app/(admin-panel)/orders/orders-list/page";
-import { Prisma } from "../generated/prisma";
+import { Prisma } from "@prisma/client";
 
 export type DashboardFilterType = "today" | "week" | "month" | "lifetime";
 export type DashboardSummary = {

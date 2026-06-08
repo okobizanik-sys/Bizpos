@@ -3,6 +3,15 @@ import { getStocksByProduct } from "@/services/stock";
 
 export const dynamic = "force-dynamic";
 
+function normalizeStock(stock: any) {
+  return Object.fromEntries(
+    Object.entries(stock).map(([key, value]) => [
+      key,
+      typeof value === "bigint" ? Number(value) : value,
+    ]),
+  );
+}
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -18,13 +27,16 @@ export async function GET(req: Request) {
       filters: search ? { search } : undefined,
     });
 
-    return NextResponse.json({ stocks }, {
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-        Pragma: "no-cache",
-        Expires: "0",
+    return NextResponse.json(
+      { stocks: stocks.map(normalizeStock) },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
       },
-    });
+    );
   } catch (error) {
     console.error("Error fetching POS stocks:", error);
     return NextResponse.json({ error: "Failed to load stocks" }, { status: 500 });

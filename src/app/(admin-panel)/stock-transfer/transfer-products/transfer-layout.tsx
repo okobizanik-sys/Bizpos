@@ -169,7 +169,7 @@ export const TransferLayout: React.FC<Props> = ({ branches }) => {
         {
           barcode: stock.barcode,
           quantity: selectedQty,
-          product_id: stock.productId,
+          product_id: BigInt(stock.productId),
           variant,
           stock: stockWithLimit,
         },

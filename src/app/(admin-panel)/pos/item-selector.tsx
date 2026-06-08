@@ -127,6 +127,8 @@ export const POSItemSelector: React.FC = () => {
   } = usePOSStore();
 
   const [stocks, setStocks] = React.useState<StockPayload[]>([]);
+  const [stocksLoading, setStocksLoading] = React.useState<boolean>(false);
+  const [stocksError, setStocksError] = React.useState<string | null>(null);
   const [orders, setOrders] = React.useState<OrderWithItem[] | null>(null);
   const [loadingOrders, setLoadingOrders] = React.useState(false);
   const [selectedBarcode, setSelectedBarcode] = React.useState<string | null>(
@@ -138,7 +140,15 @@ export const POSItemSelector: React.FC = () => {
   const [exchangeOpen, setExchangeOpen] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    if (!branch?.id) return;
+    if (!branch?.id) {
+      setStocks([]);
+      setStocksError(null);
+      setStocksLoading(false);
+      return;
+    }
+
+    setStocksLoading(true);
+    setStocksError(null);
 
     fetchPosStocks(Number(branch.id))
       .then((data) => {
@@ -146,6 +156,13 @@ export const POSItemSelector: React.FC = () => {
       })
       .catch((error) => {
         console.error("Failed to load POS stocks:", error);
+        setStocksError(
+          error instanceof Error ? error.message : "Failed to load POS stocks.",
+        );
+        setStocks([]);
+      })
+      .finally(() => {
+        setStocksLoading(false);
       });
 
     setOrders(null);
@@ -315,6 +332,13 @@ export const POSItemSelector: React.FC = () => {
                     setSelectedStock={barcodeSelected}
                     qtyLimit={qtyLimit}
                     clearAfterSelect
+                    emptyMessage={
+                      stocksLoading
+                        ? "Loading products..."
+                        : stocksError
+                        ? stocksError
+                        : "No products available for this branch."
+                    }
                   />
                   <QrCode className="opacity-60 absolute right-8 -translate-y-8" />
                 </div>
@@ -398,6 +422,13 @@ export const POSItemSelector: React.FC = () => {
                     setSelectedStock={barcodeExchangeSelected}
                     qtyLimit={exgQtyLimit}
                     clearAfterSelect
+                    emptyMessage={
+                      stocksLoading
+                        ? "Loading products..."
+                        : stocksError
+                        ? stocksError
+                        : "No products available for this branch."
+                    }
                   />
                   <QrCode className="opacity-60 absolute right-8 -translate-y-8" />
                 </div>

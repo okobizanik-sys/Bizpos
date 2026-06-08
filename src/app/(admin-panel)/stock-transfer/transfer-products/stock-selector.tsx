@@ -21,48 +21,12 @@ interface Props {
   emptyMessage?: string;
 }
 
-export const StockSelector: React.FC<Props> = ({
-  stocks,
-  setSelectedStock,
-  value,
-  clearAfterSelect = false,
-  disabled,
-  placeholder = "Enter Product ID/SKU/Name or Barcode",
-  emptyMessage = "No stock found.",
-}) => {
-  const [inputValue, setInputValue] = React.useState("");
-
-  React.useEffect(() => {
-    if (!clearAfterSelect) return;
-    if (value) {
-      setInputValue("");
-    }
-  }, [clearAfterSelect, value]);
-
+const StockSelectorContent: React.FC<
+  Omit<Props, "value" | "clearAfterSelect">
+> = ({ stocks, placeholder, disabled, emptyMessage }) => {
   return (
-    <ControlledCombobox
-      value={clearAfterSelect ? null : value}
-      onValueChange={(selectedValue) => {
-        setSelectedStock(selectedValue);
-        if (clearAfterSelect && selectedValue) {
-          setInputValue("");
-        }
-      }}
-      filterItems={(inputValue, items) => {
-        const q = inputValue.trim().toLowerCase();
-        if (!q) return items;
-        return items.filter(
-          ({ label, value }) =>
-            label.toLowerCase().includes(q) || value.toLowerCase().includes(q)
-        );
-      }}
-    >
-      <ComboboxInput
-        placeholder={placeholder}
-        disabled={disabled}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-      />
+    <>
+      <ComboboxInput placeholder={placeholder} disabled={disabled} />
       <ComboboxContent>
         {stocks.map(({ barcode, name, sku, colorName, sizeName, productId }) => (
           <ComboboxItem
@@ -83,6 +47,42 @@ export const StockSelector: React.FC<Props> = ({
         ))}
         <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
       </ComboboxContent>
+    </>
+  );
+};
+
+export const StockSelector: React.FC<Props> = ({
+  stocks,
+  setSelectedStock,
+  value,
+  clearAfterSelect = false,
+  disabled,
+  placeholder = "Enter Product ID/SKU/Name or Barcode",
+  emptyMessage = "No stock found.",
+}) => {
+  return (
+    <ControlledCombobox
+      value={clearAfterSelect ? null : value}
+      onValueChange={(selectedValue) => {
+        setSelectedStock(selectedValue);
+      }}
+      filterItems={(inputValue, items) => {
+        const q = inputValue.trim().toLowerCase();
+        if (!q) return items;
+        return items.filter(
+          ({ label, value }) =>
+            label.toLowerCase().includes(q) || value.toLowerCase().includes(q)
+        );
+      }}
+    >
+      <StockSelectorContent
+        stocks={stocks}
+        setSelectedStock={setSelectedStock}
+        qtyLimit={0}
+        disabled={disabled}
+        placeholder={placeholder}
+        emptyMessage={emptyMessage}
+      />
     </ControlledCombobox>
   );
 };

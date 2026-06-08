@@ -213,7 +213,7 @@ export default async function SupplierProfilePage({
                         ) : (
                           <SupplierPayDueDialog
                             supplierId={supplierPrimaryId}
-                            purchaseId={purchase.id}
+                            purchaseId={Number(purchase.id)}
                             dueAmount={purchase.due_amount}
                           />
                         )}

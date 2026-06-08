@@ -27,7 +27,7 @@ import { paySupplierDue } from "./action";
 
 type Props = {
   supplierId: number;
-  purchaseId: number;
+  purchaseId: number | bigint;
   dueAmount?: number;
 };
 

@@ -14,9 +14,20 @@ type PaySupplierDuePayload = {
 
 export async function paySupplierDue(
   supplierId: number,
-  purchaseId: number,
+  purchaseId: number | bigint | string,
   payload: PaySupplierDuePayload
 ) {
+  const normalizedPurchaseId =
+    typeof purchaseId === "bigint"
+      ? Number(purchaseId)
+      : typeof purchaseId === "string"
+      ? Number(purchaseId)
+      : purchaseId;
+
+  if (!Number.isFinite(normalizedPurchaseId)) {
+    throw new Error("Invalid purchase ID.");
+  }
+
   const supplier = await getSupplierById(supplierId);
 
   if (!supplier) {
@@ -38,7 +49,7 @@ export async function paySupplierDue(
   try {
     const updated = await prisma.$transaction(async (tx) => {
       const purchase = await tx.stock_histories.findFirst({
-        where: { id: purchaseId, supplier_name: supplier.name },
+        where: { id: normalizedPurchaseId, supplier_name: supplier.name },
         select: {
           id: true,
           quantity: true,
@@ -71,7 +82,7 @@ export async function paySupplierDue(
       const newDue = Math.max(currentDue - amount, 0);
 
       await tx.stock_histories.update({
-        where: { id: purchaseId },
+        where: { id: normalizedPurchaseId },
         data: {
           paid_amount: newPaid,
           due_amount: newDue,

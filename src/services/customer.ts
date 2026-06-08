@@ -4,7 +4,7 @@ import prisma from "@/db/prisma";
 import { logger } from "../lib/winston";
 import { Customers, CustomerWithOrders } from "@/types/shared";
 import { CustomerFilter } from "@/app/(admin-panel)/customers/customers-list/page";
-import { Prisma } from "../generated/prisma";
+import { Prisma } from "@prisma/client";
 
 export interface CustomerWithRelations {
   id: number;
@@ -129,8 +129,9 @@ export async function getCustomersWithOrders(params: {
   
   if (params.where) {
     for (const [key, value] of Object.entries(params.where)) {
-       whereStr += ` AND customers.${key} = ?`;
-       queryParams.push(value);
+      const columnName = key.includes('.') ? key : `customers.${key}`;
+      whereStr += ` AND ${columnName} = ?`;
+      queryParams.push(value);
     }
   }
 
