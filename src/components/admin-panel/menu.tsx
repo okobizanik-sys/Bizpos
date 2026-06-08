@@ -139,3 +139,5 @@ export function Menu({ isOpen }: MenuProps) {
     </ScrollArea>
   );
 }
+
+export default Menu;

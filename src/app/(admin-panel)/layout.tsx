@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import _dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import "../globals.css";
-import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
+const AdminPanelLayout = _dynamic(
+  () => import("@/components/admin-panel/admin-panel-layout"),
+  { ssr: false, loading: () => null }
+);
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import NextTopLoader from "nextjs-toploader";

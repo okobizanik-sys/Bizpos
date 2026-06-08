@@ -21,16 +21,19 @@ export async function StockReceiveAction(
 
       for (const item of challanItemList) {
         if (item.id !== undefined) {
+          if (!item.barcode || item.to_branch_id == null || item.quantity == null) {
+            throw new Error("Invalid challan item payload for stock receive.");
+          }
+
           const stock = await updateStockBranchId(
             item.challanId,
-            item.to_branch_id,
-            item.quantity,
-            item.barcode,
+            Number(item.to_branch_id),
+            Number(item.quantity),
+            String(item.barcode),
             tx
           );
 
-          logger.info(`Stock branch ID updated successfully! ${stock}`);
-        } else {
+          logger.info(`Stock branch ID updated successfully! ${JSON.stringify(stock)}`);
         }
       }
     });
@@ -40,7 +43,13 @@ export async function StockReceiveAction(
     revalidatePath("/inventories/stock-list");
     revalidatePath("/inventories/stock-history");
     return { success: true, message: "Stock receive successful!" };
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Stock receive failed.", {
+      error: error?.message || error,
+      stack: error?.stack,
+      challanItemList,
+      challanId: challan?.id,
+    });
     throw new Error("Stock receive failed. Please try again.");
   }
 }

@@ -1,6 +1,10 @@
 "use client";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import ReportPage from "@/components/report-page/report-page";
+const ReportPage = dynamic(
+  () => import("@/components/report-page/report-page"),
+  { ssr: false, loading: () => null }
+);
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -115,24 +119,24 @@ export default function AdminDashboard({
       </div>
 
       <div className="m-4 mt-1 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="bg-[#b074ff] transition-colors hover:bg-[#a668f8] flex items-end justify-between">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
-            <div className="bg-white rounded-sm h-8 w-8 flex justify-center items-center">
+            <div className=" rounded-sm h-8 w-8 flex justify-center items-center">
               <ScrollText size={20} />
             </div>
             <CardHeader className="">
-              <CardDescription className="text-white">
+              <CardDescription className="">
                 Total Sales
               </CardDescription>
-              <CardTitle className="text-white">
+              <CardTitle className="">
                 {makeBDPrice(totalSales)}
               </CardTitle>
             </CardHeader>
           </div>
-          <CardHeader className="text-white">{show}</CardHeader>
+          <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between bg-[#ffc6c6] transition-colors hover:bg-[#ffb8b8]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -145,7 +149,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -160,7 +164,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-end justify-between bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -174,7 +178,7 @@ export default function AdminDashboard({
         </Card>
         
 
-        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#FFF3DBEE] rounded-sm h-8 w-8 flex justify-center items-center">
               <ClipboardCheck size={20} color="#FFAA00" />
@@ -187,7 +191,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6 bg-[#c091fd] transition-colors hover:bg-[#b680fd]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-center justify-start pl-6">
           <div className="bg-[#FFDCF7] rounded-sm h-8 w-8 flex justify-center items-center">
             <Boxes size={20} color="#FF1BCD" />
           </div>
@@ -199,7 +203,7 @@ export default function AdminDashboard({
           </CardHeader>
         </Card>
 
-          <Card className="bg-[#ffc6c6] transition-colors hover:bg-[#ffb8b8]">
+          <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800">
             <Link
               href="/damage-products/list"
               className="flex items-center justify-start pl-6"
@@ -214,7 +218,7 @@ export default function AdminDashboard({
               </CardHeader>
             </Link>
           </Card>
-          <Card className="bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
+          <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800">
             <Link
               href="/inventories/expired-products"
               className="flex items-center justify-start pl-6"
@@ -229,7 +233,7 @@ export default function AdminDashboard({
               </CardHeader>
             </Link>
           </Card>
-        <Card className="flex items-center justify-start pl-6 bg-[#ffc6c6]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-center justify-start pl-6">
           <div className="bg-[#E7F0FF] rounded-sm h-8 w-8 flex justify-center items-center">
             <RotateCcw size={20} color="#2563EB" />
           </div>
@@ -241,7 +245,7 @@ export default function AdminDashboard({
 
         
 
-        <Card className="flex items-end justify-between bg-[#c6ffc9] transition-colors hover:bg-[#b1ffb5] ">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-end justify-between">
           <div className="flex items-center justify-start pl-6 ">
             <div className="bg-[#DDFFE2] rounded-sm h-8 w-8 flex justify-center items-center">
               <ShoppingBag size={20} color="#29CC6A" />
@@ -254,7 +258,7 @@ export default function AdminDashboard({
           <CardHeader className="">{show}</CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6 bg-[#c091fd] transition-colors hover:bg-[#b680fd]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-center justify-start pl-6">
           <div className="bg-blue-200 rounded-sm h-8 w-8 flex justify-center items-center">
             <Users size={20} color="blue" />
           </div>
@@ -264,7 +268,7 @@ export default function AdminDashboard({
           </CardHeader>
         </Card>
 
-        <Card className="flex items-center justify-start pl-6 bg-[#ffd6b0] transition-colors hover:bg-[#ffcc96]">
+        <Card className="bg-gray-300 dark:bg-gray-900 transition-colors hover:bg-gray-400 dark:hover:bg-zinc-800 flex items-center justify-start pl-6">
           <div className="bg-[#EDEAFF] rounded-sm h-8 w-8 flex justify-center items-center">
             <UsersRound size={20} color="#7B61FF" />
           </div>

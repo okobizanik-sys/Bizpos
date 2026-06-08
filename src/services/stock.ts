@@ -496,11 +496,27 @@ export async function updateStockBranchId(
   barcode: string,
   tx?: any
 ) {
+  const branchId = Number(toBranchId);
+  const moveQuantity = Number(quantity);
+  const productBarcode = String(barcode);
+
+  if (!productBarcode) {
+    throw new Error("Missing barcode for stock transfer.");
+  }
+
+  if (!Number.isInteger(branchId) || branchId <= 0) {
+    throw new Error("Invalid destination branch ID for stock transfer.");
+  }
+
+  if (!Number.isInteger(moveQuantity) || moveQuantity <= 0) {
+    throw new Error("Invalid quantity for stock transfer.");
+  }
+
   const moveStock = async (prismaTx: any) => {
     const stockEntries = await prismaTx.stocks.findMany({
-      where: { 
-        barcode,
-        branch_id: { not: toBranchId }
+      where: {
+        barcode: productBarcode,
+        branch_id: { not: branchId },
       },
       orderBy: { updated_at: 'asc' },
       select: {
@@ -512,15 +528,17 @@ export async function updateStockBranchId(
         cost: true,
         quantity: true,
         condition: true,
-      }
+      },
     });
 
-    let remainingQuantity = quantity;
+    let remainingQuantity = moveQuantity;
 
     for (const stock of stockEntries) {
       if (remainingQuantity <= 0) break;
 
       const currentQuantity = Number(stock.quantity ?? 0);
+      if (currentQuantity <= 0) continue;
+
       const updateQty = Math.min(currentQuantity, remainingQuantity);
       remainingQuantity -= updateQty;
 
@@ -529,11 +547,11 @@ export async function updateStockBranchId(
         data: {
           quantity: currentQuantity - updateQty,
           updated_at: new Date(),
-        }
+        },
       });
 
       const existingStock = await prismaTx.stocks.findFirst({
-        where: { barcode, branch_id: toBranchId }
+        where: { barcode: productBarcode, branch_id: branchId },
       });
 
       if (existingStock) {
@@ -542,13 +560,13 @@ export async function updateStockBranchId(
           data: {
             quantity: Number(existingStock.quantity ?? 0) + updateQty,
             updated_at: new Date(),
-          }
+          },
         });
       } else {
         await prismaTx.stocks.create({
           data: {
-            barcode,
-            branch_id: toBranchId,
+            barcode: productBarcode,
+            branch_id: branchId,
             quantity: updateQty,
             product_id: stock.product_id,
             cost: stock.cost,
@@ -557,16 +575,23 @@ export async function updateStockBranchId(
             condition: stock.condition,
             updated_at: new Date(),
             created_at: new Date(),
-          }
+          },
         });
       }
     }
+
+    return {
+      moved: moveQuantity - remainingQuantity,
+      remaining: remainingQuantity,
+      targetBranchId: branchId,
+      barcode: productBarcode,
+    };
   };
 
   if (tx) {
-    await moveStock(tx);
+    return await moveStock(tx);
   } else {
-    await prisma.$transaction(moveStock);
+    return await prisma.$transaction(moveStock);
   }
 }
 
