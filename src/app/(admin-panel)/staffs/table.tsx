@@ -55,7 +55,7 @@ export const StaffTable: React.FC<Props> = ({ data }) => {
   const handlePrinter = useReactToPrint({
     content: () => printerRef.current,
   });
-
+console.log(table.getRowModel().rows[0].getVisibleCells());
   return (
     <Card className="m-6 p-4 rounded-lg">
       <div className="flex justify-between items-center">
@@ -115,6 +115,7 @@ export const StaffTable: React.FC<Props> = ({ data }) => {
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
+                 cell.column.id == "Action" && row.original.email === "shameem.rml@gmail.com" ? null :
                   <TableCell
                     key={cell.id}
                     className={
@@ -124,7 +125,9 @@ export const StaffTable: React.FC<Props> = ({ data }) => {
                         : "py-1"
                     }
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  
+                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cell.column.id == "Action" && row.original.email === "shameem.rml@gmail.com" && flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
               </TableRow>

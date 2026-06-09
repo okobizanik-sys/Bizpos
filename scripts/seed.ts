@@ -32,9 +32,9 @@ const seedData: SeedData[] = [
         data: [
             {
                 id: 8,
-                name: "Abu Raihan",
-                email: "raihan.okobiz@gmail.com",
-                password: "admin",
+                name: "MD Sorowar Jahan",
+                email: "shameem.rml@gmail.com",
+                password: "sadmansakibyafi",
                 role: "ADMIN",
                 phone: "01860574432",
             },
@@ -45,14 +45,6 @@ const seedData: SeedData[] = [
                 password: "admin",
                 role: "ADMIN",
                 phone: "01744155760",
-            },
-            {
-                id: 10,
-                name: "shamee vai",
-                email: "shameem.rml@gmail.com",
-                password: "admin",
-                role: "ADMIN",
-                phone: "01744155762",
             },
         ],
     },
