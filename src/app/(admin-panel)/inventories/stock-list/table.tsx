@@ -22,7 +22,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PrintPageComponet } from "@/components/print-pages/print-page";
-import { columns } from "./columns";
 import { getTotalFromTable, makePrice } from "@/utils/helpers";
 import { getStocksByProductWithPagination } from "@/services/stock";
 import { useBranch } from "@/hooks/store/use-branch";
@@ -32,12 +31,14 @@ import { Card } from "@/components/ui/card";
 import { usePOSStore } from "@/hooks/store/use-pos-store";
 import { usePagination } from "@/hooks/use-pagination";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { getColumns } from "./columns";
 
 interface Props {
   filter: StockFilter;
+  pageCount: number;
 }
 
-export const StockTable: React.FC<Props> = ({ filter }) => {
+export const StockTable: React.FC<Props> = ({ filter, pageCount }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
   const [stocks, setStocks] = React.useState<ProductWithStockPayload[]>([]);
@@ -63,7 +64,12 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
 
       return newSearchParams.toString();
     },
-    [searchParams]
+    [searchParams],
+  );
+
+  const columns = React.useMemo(
+    () => getColumns(pagination.pageIndex * pagination.pageSize),
+    [pagination.pageIndex, pagination.pageSize],
   );
 
   React.useEffect(() => {
@@ -78,7 +84,7 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
       `${pathname}?${createQueryString({
         page: pageIndex + 1,
         per_page: pageSize,
-      })}`
+      })}`,
     );
   }, [pageIndex, pageSize]);
 
@@ -101,15 +107,17 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
     }
   }, [branch, filter, pageIndex, pageSize]);
 
-
   const table = useReactTable({
     data: stocks,
     columns,
     state: {
       pagination,
     },
-    getCoreRowModel: getCoreRowModel(),
+    pageCount: pageCount ?? -1,
     onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    autoResetPageIndex: false,
   });
 
   React.useEffect(() => {
@@ -176,7 +184,7 @@ export const StockTable: React.FC<Props> = ({ filter }) => {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );

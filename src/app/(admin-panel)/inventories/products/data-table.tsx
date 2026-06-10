@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -42,22 +41,21 @@ import { Categories } from "@/types/shared";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "zustand";
 import { BarcodePrintDialog } from "@/components/BarcodePrintDialog";
+import { getColumns, type ProductList } from "./columns";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+interface DataTableProps {
+  data: ProductList[];
   pageCount: number;
   categories: Categories[];
   totalProduct: number;
 }
 
-export function ProductDataTable<TData, TValue>({
-  columns,
+export function ProductDataTable({
   data,
   pageCount,
   categories,
   totalProduct,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps) {
   const [loading, setLoading] = React.useState(false);
   const branch = useStore(useBranch, (state) => state.branch);
 
@@ -72,6 +70,11 @@ export function ProductDataTable<TData, TValue>({
 
   const { sortParams, sorting, setSorting, makeSortingState, makeSortParams } =
     useSorting();
+
+  const columns = React.useMemo(
+    () => getColumns(pagination.pageIndex * pagination.pageSize),
+    [pagination.pageIndex, pagination.pageSize]
+  );
 
   const {
     globalFilterParam,

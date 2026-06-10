@@ -376,6 +376,7 @@ export type Settings = {
   logo_image_url?: string;
   login_image_url?: string;
   vat_rate?: number;
+  brand_name?: string;
   created_at?: Date;
   updated_at?: Date;
 };

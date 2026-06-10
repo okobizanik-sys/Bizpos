@@ -4,6 +4,7 @@ import React from "react";
 import {
   flexRender,
   getCoreRowModel,
+  type PaginationState,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { columns } from "./columns";
+import { getColumns } from "./columns";
 import exportToCsv from "tanstack-table-export-to-csv";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
@@ -25,7 +26,6 @@ import { Orders } from "@/types/shared";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "zustand";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { usePagination } from "@/hooks/use-pagination";
 import { Card } from "@/components/ui/card";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -37,87 +37,99 @@ interface Props {
 export const OrdersTable: React.FC<Props> = ({ data, pageCount }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
-  const [loading, setLoading] = React.useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { page, per_page, pageIndex, pageSize, pagination, setPagination } =
-    usePagination();
   const searchParams = useSearchParams();
+
+  const page = Number(searchParams.get("page") ?? 1);
+  const perPage = Number(searchParams.get("per_page") ?? 20);
+
+  const pagination = React.useMemo<PaginationState>(
+    () => ({
+      pageIndex: page - 1,
+      pageSize: perPage,
+    }),
+    [page, perPage]
+  );
+
+  const columns = React.useMemo(
+    () => getColumns(pagination.pageIndex * pagination.pageSize),
+    [pagination.pageIndex, pagination.pageSize]
+  );
 
   const createQueryString = React.useCallback(
     (params: Record<string, string | number | null>) => {
-      const newSearchParams = new URLSearchParams(searchParams?.toString());
+      const nextSearchParams = new URLSearchParams(searchParams.toString());
 
       for (const [key, value] of Object.entries(params)) {
         if (value === null || value === "") {
-          newSearchParams.delete(key);
+          nextSearchParams.delete(key);
         } else {
-          newSearchParams.set(key, String(value));
+          nextSearchParams.set(key, String(value));
         }
       }
 
-      return newSearchParams.toString();
+      return nextSearchParams.toString();
     },
     [searchParams]
   );
 
   React.useEffect(() => {
-    if (
-      !searchParams.get("branch_id") ||
-      !searchParams.get("page") ||
-      !searchParams.get("per_page")
-    ) {
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    let shouldReplace = false;
+
+    if (!nextSearchParams.get("branch_id")) {
+      nextSearchParams.set("branch_id", String(branch?.id || 1));
+      shouldReplace = true;
+    }
+
+    if (!nextSearchParams.get("page")) {
+      nextSearchParams.set("page", "1");
+      shouldReplace = true;
+    }
+
+    if (!nextSearchParams.get("per_page")) {
+      nextSearchParams.set("per_page", String(perPage));
+      shouldReplace = true;
+    }
+
+    if (shouldReplace) {
+      router.replace(`${pathname}?${nextSearchParams.toString()}`, {
+        scroll: false,
+      });
+    }
+  }, [branch?.id, page, perPage, pathname, router, searchParams]);
+
+  const handlePaginationChange = React.useCallback(
+    (
+      updater: PaginationState | ((old: PaginationState) => PaginationState)
+    ) => {
+      const nextPagination =
+        typeof updater === "function" ? updater(pagination) : updater;
+
       router.replace(
         `${pathname}?${createQueryString({
-          branch_id: branch?.id || 1,
-          page: pageIndex + 1,
-          per_page: pageSize,
-        })}`
+          branch_id: String(branch?.id || 1),
+          page: nextPagination.pageIndex + 1,
+          per_page: nextPagination.pageSize,
+        })}`,
+        { scroll: false }
       );
-    }
-  }, [
-    branch,
-    pathname,
-    router,
-    pageIndex,
-    pageSize,
-    searchParams,
-    createQueryString,
-  ]);
-
-  React.useEffect(() => {
-    setPagination({
-      pageIndex: Number(page) - 1,
-      pageSize: Number(per_page),
-    });
-  }, [page, per_page]);
-
-  React.useEffect(() => {
-    if (branch) {
-      router.push(
-        `${pathname}?${createQueryString({
-          branch_id: String(branch.id),
-          page: pageIndex + 1,
-          per_page: pageSize,
-        })}`
-      );
-    }
-  }, [branch, pageIndex, pageSize]);
-
-  React.useEffect(() => {
-    const loadingConditions =
-      Number(page) !== pageIndex + 1 || Number(per_page) !== pageSize;
-
-    setLoading(loadingConditions);
-  }, [page, pageIndex, per_page, pageSize]);
+    },
+    [branch?.id, createQueryString, pagination, pathname, router]
+  );
 
   const table = useReactTable({
     data,
     columns,
     pageCount: pageCount ?? -1,
-    state: { pagination },
-    onPaginationChange: setPagination,
+    state: {
+      pagination,
+    },
+    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    autoResetPageIndex: false,
   });
 
   const handleExportToCsv = () => {

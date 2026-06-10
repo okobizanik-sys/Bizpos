@@ -27,10 +27,10 @@ export type ProductList = {
   barcode?: string | null;
 };
 
-export const columns: ColumnDef<ProductList>[] = [
+export const getColumns = (serialOffset = 0): ColumnDef<ProductList>[] => [
   {
     header: "SL",
-    cell: ({ row }) => row.index + 1,
+    cell: ({ row }) => row.index + 1 + serialOffset,
   },
   {
     header: "Image",
@@ -90,3 +90,5 @@ export const columns: ColumnDef<ProductList>[] = [
     },
   },
 ];
+
+export const columns = getColumns();

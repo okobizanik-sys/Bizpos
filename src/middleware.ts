@@ -10,12 +10,7 @@ export default async function middleware(request: NextRequest) {
   const isPublicApiRoute = pathname.startsWith("/api/settings");
   const isOtherApiRoute = pathname.startsWith("/api/");
 
-  if (
-    publicPaths.includes(pathname) ||
-    isAuthRoute ||
-    isPublicApiRoute ||
-    isOtherApiRoute
-  ) {
+  if (isAuthRoute || isPublicApiRoute || isOtherApiRoute) {
     return NextResponse.next();
   }
 
@@ -33,6 +28,16 @@ export default async function middleware(request: NextRequest) {
   const userRole = token?.role;
   const userBranchId =
     token?.branchId || request.cookies.get("branch_id")?.value;
+  const dashboardRoute =
+    userRole === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
+
+  if (publicPaths.includes(pathname)) {
+    if (pathname === "/" && isAuthenticated) {
+      return NextResponse.redirect(new URL(dashboardRoute, nextUrl.origin));
+    }
+
+    return NextResponse.next();
+  }
 
   const response = NextResponse.next();
 
@@ -49,8 +54,6 @@ export default async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/dashboard") {
-    const dashboardRoute =
-      userRole === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
     return NextResponse.redirect(new URL(dashboardRoute, nextUrl.origin));
   }
 
@@ -61,7 +64,6 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-
   if (
     pathname === "/inventories/products" &&
     !nextUrl.searchParams.get("page")
@@ -69,19 +71,16 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(
       new URL(
         "/inventories/products?page=1&per_page=10&sort=id%3Adesc",
-        nextUrl.origin
-      )
+        nextUrl.origin,
+      ),
     );
   }
-  if (
-    pathname === "/orders/orders-list" &&
-    !nextUrl.searchParams.get("page")
-  ) {
+  if (pathname === "/orders/orders-list" && !nextUrl.searchParams.get("page")) {
     return NextResponse.redirect(
       new URL(
         `/orders/orders-list?page=1&per_page=10&sort=id%3Adesc`,
-        nextUrl.origin
-      )
+        nextUrl.origin,
+      ),
     );
   }
 }

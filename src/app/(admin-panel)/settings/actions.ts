@@ -5,7 +5,11 @@ import {
   createPaymentMethods,
   deletePaymentMethod,
 } from "@/services/payment-method";
-import { createSettings, deleteSettings, updateSettings } from "@/services/settings";
+import {
+  createSettings,
+  deleteSettings,
+  updateSettings,
+} from "@/services/settings";
 import { filenameGenerator } from "@/utils/helpers";
 import { revalidatePath } from "next/cache";
 
@@ -20,7 +24,7 @@ export async function SettingsFormAction(formdata: FormData) {
     const logofilename = filenameGenerator(
       settingsData.logo[0].name,
       "logo",
-      "/images/logo"
+      "/images/logo",
     );
     await saveImageBufferToFile(processedLogoFile, logofilename);
 
@@ -30,7 +34,7 @@ export async function SettingsFormAction(formdata: FormData) {
     const loginfilename = filenameGenerator(
       settingsData.login_image[0].name,
       "login",
-      "/images/login"
+      "/images/login",
     );
     await saveImageBufferToFile(processedLoginFile, loginfilename);
 
@@ -40,6 +44,7 @@ export async function SettingsFormAction(formdata: FormData) {
       logo_image_url: logo_image_url,
       login_image_url: login_image_url,
       return_privacy_policy: formdata.get("return_privacy_policy") as string,
+      brand_name: formdata.get("brand_name") as string,
       vat_rate: Number(formdata.get("vat_rate")),
     };
 
@@ -65,7 +70,7 @@ export async function updateSettingFormAction(id: number, formdata: FormData) {
       const logofilename = filenameGenerator(
         settingsData.logo[0].name,
         "logo",
-        "/images/logo"
+        "/images/logo",
       );
       await saveImageBufferToFile(processedLogoFile, logofilename);
       logo_image_url = logofilename;
@@ -74,12 +79,12 @@ export async function updateSettingFormAction(id: number, formdata: FormData) {
     let login_image_url = "";
     if (settingsData.login_image.length > 0) {
       const processedLoginFile = await processImage(
-        settingsData.login_image[0]
+        settingsData.login_image[0],
       );
       const loginfilename = filenameGenerator(
         settingsData.login_image[0].name,
         "login",
-        "/images/login"
+        "/images/login",
       );
       await saveImageBufferToFile(processedLoginFile, loginfilename);
       login_image_url = loginfilename;
@@ -91,6 +96,7 @@ export async function updateSettingFormAction(id: number, formdata: FormData) {
       login_image_url:
         login_image_url || (formdata.get("login_image_url") as string),
       return_privacy_policy: formdata.get("return_privacy_policy") as string,
+      brand_name: formdata.get("brand_name") as string,
       vat_rate: Number(formdata.get("vat_rate")),
     };
 

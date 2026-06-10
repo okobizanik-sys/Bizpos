@@ -1,11 +1,9 @@
-import { getOrders } from "@/services/order";
 import React from "react";
 import { ReturnOrdersTable } from "./table";
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { OrderFilter } from "../orders-list/page";
 import { FilterReturnOrderForm } from "./filter";
 import { Navbar } from "@/components/admin-panel/navbar";
-import prisma from "@/db/prisma";
+import { getOrders, getOrdersCount } from "@/services/order";
 
 export const revalidate = 0;
 
@@ -16,6 +14,11 @@ interface Props {
 }
 
 export default async function ReturnOrders({ searchParams }: Props) {
+  const page = searchParams.page ? parseInt(searchParams.page as string) : 1;
+  const per_page = searchParams.per_page
+    ? parseInt(searchParams.per_page as string)
+    : 20;
+
   const filter: OrderFilter = {
     search: searchParams.search as string,
     status: searchParams.status ? (searchParams.status as string) : "RETURN",
@@ -27,18 +30,17 @@ export default async function ReturnOrders({ searchParams }: Props) {
       : undefined,
   };
 
-  const order = await getOrders(filter);
-
-  const { per_page } = searchParams;
-  const limit = typeof per_page === "string" ? parseInt(per_page) : 20;
-
-  const countResult = await prisma.orders.aggregate({
-    _count: { id: true },
-    where: { status: "RETURN" }
+  const order = await getOrders({
+    ...filter,
+    page,
+    per_page,
   });
-  
-  const totals = Number(countResult._count.id);
-  const pageCount = Math.ceil(totals / limit);
+
+  const totals = await getOrdersCount({
+    ...filter,
+    status: "RETURN",
+  });
+  const pageCount = Math.ceil(totals / per_page);
   
   return (
     <>

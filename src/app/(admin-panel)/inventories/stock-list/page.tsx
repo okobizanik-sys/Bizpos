@@ -4,6 +4,7 @@ import { FilterStockForm } from "./filter";
 import { Navbar } from "@/components/admin-panel/navbar";
 import { StockDashboard } from "./dashboard";
 import { getTotalStockSummary } from "@/services/stock";
+import prisma from "@/db/prisma";
 
 export const revalidate = 0;
 
@@ -39,20 +40,30 @@ interface Props {
 }
 
 export default async function StockListPage({ searchParams }: Props) {
-  const { per_page } = searchParams;
+  const { per_page, page } = searchParams;
+
+  const limit = typeof per_page === "string" ? parseInt(per_page) : 20;
+  const currentPage = typeof page === "string" ? parseInt(page) : 1;
+  const skip = (currentPage - 1) * limit;
 
   const filter: StockFilter = {
     search: searchParams.search as string,
   };
 
   const stockCounts = await getTotalStockSummary();
+  const countResult = await prisma.products.aggregate({
+    _count: { id: true },
+  });
+
+  const totals = Number(countResult._count.id);
+  const pageCount = Math.ceil(totals / limit);
 
   return (
     <>
       <Navbar title="Stock List" />
       <FilterStockForm currentFilters={filter} />
       <StockDashboard summary={stockCounts} />
-      <StockTable filter={filter} />
+      <StockTable filter={filter} pageCount={pageCount} />
     </>
   );
 }

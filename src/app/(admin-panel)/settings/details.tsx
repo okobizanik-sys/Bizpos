@@ -43,10 +43,10 @@ export function SettingDetailSheet({ setting }: Props) {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState(
-    fileUrlGenerator(setting.logo_image_url || "")
+    fileUrlGenerator(setting.logo_image_url || ""),
   );
   const [selectedLoginImage, setSelectedLoginImage] = useState(
-    fileUrlGenerator(setting.login_image_url || "")
+    fileUrlGenerator(setting.login_image_url || ""),
   );
   const { toast } = useToast();
 
@@ -54,6 +54,7 @@ export function SettingDetailSheet({ setting }: Props) {
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
       return_privacy_policy: setting?.return_privacy_policy,
+      brand_name: String(setting?.brand_name),
       vat_rate: String(setting?.vat_rate),
       logo_image: [],
       login_image: [],
@@ -168,7 +169,7 @@ export function SettingDetailSheet({ setting }: Props) {
                             size: "icon",
                             variant: "ghost",
                           }),
-                          "size-8"
+                          "size-8",
                         )}
                       >
                         <ImagePlus className="size-4" />
@@ -218,7 +219,7 @@ export function SettingDetailSheet({ setting }: Props) {
                             size: "icon",
                             variant: "ghost",
                           }),
-                          "size-8"
+                          "size-8",
                         )}
                       >
                         <ImagePlus className="size-4" />
@@ -271,6 +272,23 @@ export function SettingDetailSheet({ setting }: Props) {
                 )}
               />
             </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+              <FormField
+                control={form.control}
+                name="brand_name"
+                render={({ field }) => (
+                  <FormItem className="col-span-1">
+                    <FormLabel>Copyright Text</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter copyright text" {...field} />
+                    </FormControl>
+                    <FormDescription className="text-red-400 text-xs min-h-4">
+                      {form.formState.errors.brand_name?.message}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="mt-4 flex justify-end gap-2">
               <Button type="submit" variant="default" loading={updating}>
@@ -291,5 +309,3 @@ export function SettingDetailSheet({ setting }: Props) {
     </Sheet>
   );
 }
-
-

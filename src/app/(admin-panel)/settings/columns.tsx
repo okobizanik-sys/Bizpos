@@ -31,6 +31,17 @@ export const columns: ColumnDef<Settings>[] = [
     ),
   },
   {
+    header: "Copyright Text",
+    accessorKey: "brand_name",
+    cell: ({ row }) => (
+      <div
+        dangerouslySetInnerHTML={{
+          __html: String(row.original.brand_name),
+        }}
+      />
+    ),
+  },
+  {
     header: "Login Image",
     accessorKey: "login_image_url",
     cell: ({ row }) => {

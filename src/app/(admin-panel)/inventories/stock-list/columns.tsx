@@ -12,10 +12,10 @@ const calculateSellValue = (product: ProductWithStockPayload) => {
   return Math.round(product.selling_price * product.quantity);
 };
 
-export const columns: ColumnDef<ProductWithStockPayload>[] = [
+export const getColumns = (serialOffset = 0): ColumnDef<ProductWithStockPayload>[] => [
   {
     header: "SL",
-    cell: ({ row }) => row.index + 1,
+    cell: ({ row }) => row.index + 1 + serialOffset,
   },
   {
     header: "Barcode",

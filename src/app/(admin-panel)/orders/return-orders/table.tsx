@@ -22,12 +22,12 @@ import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, Printer } from "lucide-react";
 import { PrintPageComponet } from "@/components/print-pages/print-page";
 import { Orders } from "@/types/shared";
-import { columns } from "./column";
+import { getColumns } from "./column";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "zustand";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { usePagination } from "@/hooks/use-pagination";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 interface Props {
   data: Orders[];
@@ -37,13 +37,15 @@ interface Props {
 export const ReturnOrdersTable: React.FC<Props> = ({ data, pageCount }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { page, per_page, pageIndex, pageSize, pagination, setPagination } =
     usePagination();
-  const searchParams = useSearchParams();
 
   const createQueryString = React.useCallback(
     (params: Record<string, string | number | null>) => {
-      const newSearchParams = new URLSearchParams(searchParams?.toString());
+      const newSearchParams = new URLSearchParams(searchParams.toString());
 
       for (const [key, value] of Object.entries(params)) {
         if (value === null || value === "") {
@@ -65,6 +67,20 @@ export const ReturnOrdersTable: React.FC<Props> = ({ data, pageCount }) => {
     });
   }, [page, per_page]);
 
+  const columns = React.useMemo(
+    () => getColumns(pageIndex * pageSize),
+    [pageIndex, pageSize]
+  );
+
+  React.useEffect(() => {
+    router.push(
+      `${pathname}?${createQueryString({
+        page: pageIndex + 1,
+        per_page: pageSize,
+      })}`
+    );
+  }, [pageIndex, pageSize, pathname, router, createQueryString]);
+
   const table = useReactTable({
     data,
     columns,
@@ -72,6 +88,8 @@ export const ReturnOrdersTable: React.FC<Props> = ({ data, pageCount }) => {
     state: { pagination },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    autoResetPageIndex: false,
   });
 
   const handleExportToCsv = () => {

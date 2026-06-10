@@ -27,19 +27,89 @@ import { ProductList } from "../products/columns";
 import { useBranch } from "@/hooks/store/use-branch";
 import { useStore } from "zustand";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { usePagination } from "@/hooks/use-pagination";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { getStockHistoriesWithPagination } from "@/services/stock";
 
 interface Props {
-  histories: StockHistory[];
+  filter: {
+    startDate: Date;
+    endDate: Date;
+  };
+  pageCount: number;
 }
 
-export const StockHistoryTable: React.FC<Props> = ({ histories }) => {
+export const StockHistoryTable: React.FC<Props> = ({ filter, pageCount }) => {
   const printerRef = React.useRef(null);
   const branch = useStore(useBranch, (state) => state.branch);
+  const [histories, setHistories] = React.useState<StockHistory[]>([]);
+
+  const { page, per_page, pageIndex, pageSize, pagination, setPagination } =
+    usePagination();
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const createQueryString = React.useCallback(
+    (params: Record<string, string | number | null>) => {
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
+
+      for (const [key, value] of Object.entries(params)) {
+        if (value === null || value === "") {
+          newSearchParams.delete(key);
+        } else {
+          newSearchParams.set(key, String(value));
+        }
+      }
+
+      return newSearchParams.toString();
+    },
+    [searchParams],
+  );
+
+  React.useEffect(() => {
+    setPagination({
+      pageIndex: Number(page) - 1,
+      pageSize: Number(per_page),
+    });
+  }, [page, per_page]);
+
+  React.useEffect(() => {
+    router.push(
+      `${pathname}?${createQueryString({
+        page: pageIndex + 1,
+        per_page: pageSize,
+      })}`,
+    );
+  }, [pageIndex, pageSize]);
+
+  React.useEffect(() => {
+    getStockHistoriesWithPagination({
+      where: {
+        created_at: {
+          gte: filter.startDate,
+          lte: filter.endDate,
+        },
+      },
+      page: pageIndex + 1,
+      per_page: pageSize,
+    }).then((data) => {
+      setHistories(data);
+    });
+  }, [filter, pageIndex, pageSize]);
 
   const table = useReactTable({
     data: histories,
     columns,
+    state: {
+      pagination,
+    },
+    pageCount: pageCount ?? -1,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    autoResetPageIndex: false,
   });
 
   const handleExportToCsv = () => {
@@ -53,7 +123,7 @@ export const StockHistoryTable: React.FC<Props> = ({ histories }) => {
     exportToCsv(
       "stock-history-" + format(new Date(), "YMdHHmmss"),
       headers,
-      rows
+      rows,
     );
   };
 
@@ -103,7 +173,7 @@ export const StockHistoryTable: React.FC<Props> = ({ histories }) => {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );

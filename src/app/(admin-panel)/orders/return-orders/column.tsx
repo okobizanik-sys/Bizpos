@@ -9,10 +9,10 @@ import { FaLocationDot, FaPhone, FaUser } from "react-icons/fa6";
 import React from "react";
 import copy from "copy-to-clipboard";
 
-export const columns: ColumnDef<Orders>[] = [
+export const getColumns = (serialOffset = 0): ColumnDef<Orders>[] => [
   {
     header: "SL",
-    cell: ({ row }) => row.index + 1,
+    cell: ({ row }) => row.index + 1 + serialOffset,
   },
   {
     header: "Date",

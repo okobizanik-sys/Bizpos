@@ -22,7 +22,7 @@ export async function createStock(
     expire_date?: string | null;
     supplier_name?: string | null;
   },
-  tx?: any
+  tx?: any,
 ) {
   const dbs = tx || prisma;
 
@@ -38,7 +38,7 @@ export async function createStock(
       product_date: data.product_date ? new Date(data.product_date) : null,
       shelf_life: data.shelf_life ?? null,
       expire_date: data.expire_date ? new Date(data.expire_date) : null,
-    }
+    },
   });
 
   if (existingStock) {
@@ -58,7 +58,7 @@ export async function createStock(
         expire_date: data.expire_date ? new Date(data.expire_date) : null,
         supplier_name: data.supplier_name || null,
         updated_at: new Date(),
-      }
+      },
     });
 
     return {
@@ -81,7 +81,7 @@ export async function createStock(
       expire_date: data.expire_date ? new Date(data.expire_date) : null,
       supplier_name: data.supplier_name || null,
       created_at: new Date(),
-    }
+    },
   });
 
   return { message: "New stock entry added successfully." };
@@ -101,7 +101,7 @@ export async function createStockHistory(
     expire_date?: string | null;
     supplier_name?: string | null;
   },
-  tx?: any
+  tx?: any,
 ) {
   const dbs = tx || prisma;
   const historyData: any = { ...data };
@@ -115,6 +115,14 @@ export async function createStockHistory(
 export async function getStockHistories(params: {
   where?: { created_at?: { gte: Date; lte: Date } };
 }) {
+  return getStockHistoriesWithPagination(params);
+}
+
+function buildStockHistoryQuery(params: {
+  where?: { created_at?: { gte: Date; lte: Date } };
+  page?: number;
+  per_page?: number;
+}) {
   let whereStr = "1=1";
   const queryParams: any[] = [];
 
@@ -122,6 +130,13 @@ export async function getStockHistories(params: {
     whereStr += " AND sh.created_at BETWEEN ? AND ?";
     queryParams.push(params.where.created_at.gte, params.where.created_at.lte);
   }
+
+  const offset =
+    params.page && params.per_page ? (params.page - 1) * params.per_page : 0;
+  const limitOffsetStr =
+    params.page && params.per_page
+      ? `LIMIT ${params.per_page} OFFSET ${offset}`
+      : "";
 
   const query = `
     SELECT 
@@ -134,17 +149,43 @@ export async function getStockHistories(params: {
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE ${whereStr}
     ORDER BY sh.created_at DESC
+    ${limitOffsetStr}
   `;
 
-  const stockHistory = await prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
-  logger.info(`Stock history: ${stockHistory}`);
-  return stockHistory;
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM stock_histories sh
+    LEFT JOIN products p ON sh.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE ${whereStr}
+  `;
+
+  return { query, countQuery, queryParams };
 }
 
 export async function getStockHistoriesWithPagination(params: {
   where?: { created_at?: { gte: Date; lte: Date } };
+  page?: number;
+  per_page?: number;
 }) {
-  return getStockHistories(params); // Implementation is same as above for Prisma query
+  const { query, queryParams } = buildStockHistoryQuery(params);
+  const stockHistory = await prisma.$queryRawUnsafe<any[]>(
+    query,
+    ...queryParams,
+  );
+  logger.info(`Stock history: ${stockHistory}`);
+  return stockHistory;
+}
+
+export async function getStockHistoriesCount(params: {
+  where?: { created_at?: { gte: Date; lte: Date } };
+}) {
+  const { countQuery, queryParams } = buildStockHistoryQuery(params);
+  const result = await prisma.$queryRawUnsafe<any[]>(
+    countQuery,
+    ...queryParams,
+  );
+  return Number(result[0]?.total || 0);
 }
 
 export async function getStocksByProduct(params: {
@@ -205,16 +246,20 @@ export async function getStocksByProductWithPagination(params: {
   return getStocksByProduct({ ...params, page, per_page });
 }
 
-function buildStocksQuery(params: { where: { [key: string]: any }; distinct?: string[]; condition?: string }) {
+function buildStocksQuery(params: {
+  where: { [key: string]: any };
+  distinct?: string[];
+  condition?: string;
+}) {
   let whereStr = `s.condition = '${params.condition || "new"}'`;
   const queryParams: any[] = [];
 
   for (const [key, value] of Object.entries(params.where)) {
-    if (key === 'branch_id') {
+    if (key === "branch_id") {
       whereStr += ` AND s.branch_id = ?`;
-    } else if (key === 'product_id') {
+    } else if (key === "product_id") {
       whereStr += ` AND s.product_id = ?`;
-    } else if (key === 'barcode') {
+    } else if (key === "barcode") {
       whereStr += ` AND s.barcode = ?`;
     } else {
       whereStr += ` AND ${key} = ?`;
@@ -229,7 +274,10 @@ export async function getStocks(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const { whereStr, queryParams } = buildStocksQuery({ where: params.where, condition: "new" });
+  const { whereStr, queryParams } = buildStocksQuery({
+    where: params.where,
+    condition: "new",
+  });
 
   const query = `
     SELECT 
@@ -270,7 +318,10 @@ export async function getDamagedStocks(params: {
   where: { [key: string]: any };
   distinct?: string[];
 }) {
-  const { whereStr, queryParams } = buildStocksQuery({ where: params.where, condition: "damaged" });
+  const { whereStr, queryParams } = buildStocksQuery({
+    where: params.where,
+    condition: "damaged",
+  });
 
   const query = `
     SELECT 
@@ -306,7 +357,10 @@ export async function getExpiredStocks(params: {
   distinct?: string[];
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const { whereStr, queryParams } = buildStocksQuery({ where: params.where || {}, condition: "new" });
+  const { whereStr, queryParams } = buildStocksQuery({
+    where: params.where || {},
+    condition: "new",
+  });
 
   const query = `
     SELECT 
@@ -351,7 +405,7 @@ export async function getStocksCount(params: {
 }): Promise<number> {
   const stock = await prisma.stocks.aggregate({
     _sum: { quantity: true },
-    where: params.where
+    where: params.where,
   });
 
   return Number(stock._sum.quantity || 0);
@@ -429,7 +483,7 @@ export async function getInventoryAlertSummary(): Promise<InventoryAlertSummary>
 export async function decreaseStock(
   barcode: string,
   quantity: number,
-  tx?: any
+  tx?: any,
 ) {
   const dbs = tx || prisma;
   const stockItem = await dbs.stocks.findFirst({ where: { barcode } });
@@ -440,7 +494,7 @@ export async function decreaseStock(
 
   await dbs.stocks.updateMany({
     where: { barcode },
-    data: { quantity: { decrement: quantity } }
+    data: { quantity: { decrement: quantity } },
   });
 }
 
@@ -453,7 +507,7 @@ export async function increaseStock(
   colorId?: number,
   sizeId?: number,
   condition?: string,
-  tx?: any
+  tx?: any,
 ) {
   const dbs = tx || prisma;
 
@@ -469,7 +523,7 @@ export async function increaseStock(
       condition: condition || "new",
       created_at: new Date(),
       updated_at: new Date(),
-    }
+    },
   });
 
   return increasedStock;
@@ -485,7 +539,7 @@ export async function updateStockCondition(itemIds: bigint[]) {
     data: {
       condition: "damaged",
       updated_at: new Date(),
-    }
+    },
   });
 }
 
@@ -494,7 +548,7 @@ export async function updateStockBranchId(
   toBranchId: number,
   quantity: number,
   barcode: string,
-  tx?: any
+  tx?: any,
 ) {
   const branchId = Number(toBranchId);
   const moveQuantity = Number(quantity);
@@ -518,7 +572,7 @@ export async function updateStockBranchId(
         barcode: productBarcode,
         branch_id: { not: branchId },
       },
-      orderBy: { updated_at: 'asc' },
+      orderBy: { updated_at: "asc" },
       select: {
         id: true,
         product_id: true,
@@ -598,7 +652,7 @@ export async function updateStockBranchId(
 export async function updateStockQuantity(
   quantity: number,
   barcode: string,
-  tx?: any
+  tx?: any,
 ) {
   const dbs = tx || prisma;
 
@@ -607,6 +661,6 @@ export async function updateStockQuantity(
     data: {
       quantity: quantity,
       updated_at: new Date(),
-    }
+    },
   });
 }

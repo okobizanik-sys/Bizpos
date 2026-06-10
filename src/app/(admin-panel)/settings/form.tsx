@@ -70,12 +70,12 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
     });
   }, [loading]);
 
-
   const form = useForm<z.infer<typeof settingsFormSchema>>({
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
       return_privacy_policy: "",
       vat_rate: "",
+      brand_name: "",
       logo_image: [],
       login_image: [],
     },
@@ -178,7 +178,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                               size: "icon",
                               variant: "ghost",
                             }),
-                            "size-8"
+                            "size-8",
                           )}
                         >
                           <ImagePlus className="size-4" />
@@ -226,7 +226,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                               size: "icon",
                               variant: "ghost",
                             }),
-                            "size-8"
+                            "size-8",
                           )}
                         >
                           <ImagePlus className="size-4" />
@@ -274,6 +274,24 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                       </FormControl>
                       <FormDescription className="text-red-400 text-xs min-h-4">
                         {form.formState.errors.vat_rate?.message}
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                <FormField
+                  control={form.control}
+                  name="brand_name"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Copyright Text</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter copyright text" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-red-400 text-xs min-h-4">
+                        {form.formState.errors.brand_name?.message}
                       </FormDescription>
                     </FormItem>
                   )}

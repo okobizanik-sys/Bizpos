@@ -391,6 +391,7 @@ model settings {
 model settings_data {
   id                    Int      @id @default(autoincrement()) @db.UnsignedInt
   return_privacy_policy String?  @db.Text
+  brand_name        String?  @db.Text
   logo_image_url        String?  @db.VarChar(255)
   login_image_url       String?  @db.VarChar(255)
   vat_rate              Decimal? @db.Decimal(5, 2)

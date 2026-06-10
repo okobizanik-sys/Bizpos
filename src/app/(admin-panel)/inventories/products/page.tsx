@@ -1,5 +1,4 @@
 import { ContentLayout } from "@/components/admin-panel/content-layout";
-import { columns } from "./columns";
 import { fileUrlGenerator } from "@/utils/helpers";
 import { getProducts } from "@/services/product";
 import { ProductDataTable } from "./data-table";
@@ -49,7 +48,6 @@ export default async function ProductListPage({ searchParams }: Props) {
   return (
     <ContentLayout title="Product List">
       <ProductDataTable
-        columns={columns}
         data={data.products.map((product: any) => ({
           ...product,
           imageUrl: product.imageUrl
