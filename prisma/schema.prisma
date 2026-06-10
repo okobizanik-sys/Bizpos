@@ -458,19 +458,6 @@ model client_cart_items {
   @@index([user_ref], map: "client_cart_items_user_ref_index")
 }
 
-// ─── Knex Migration Tables (kept for compatibility, not used by Prisma) ───────
-model knex_migrations {
-  id             Int      @id @default(autoincrement()) @db.UnsignedInt
-  name           String?  @db.VarChar(255)
-  batch          Int?
-  migration_time DateTime @default(now()) @db.Timestamp(0)
-}
-
-model knex_migrations_lock {
-  index     Int  @id @default(autoincrement()) @db.UnsignedInt
-  is_locked Int?
-}
-
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum users_role {

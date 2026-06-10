@@ -4,6 +4,7 @@ import React from "react";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -84,6 +85,7 @@ export const SalesTable: React.FC<Props> = ({ data }) => {
       pagination,
     },
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
   });
 

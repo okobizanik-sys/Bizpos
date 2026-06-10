@@ -132,8 +132,9 @@ export default function DamageProducts() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const totals = damagedStocks.reduce(
