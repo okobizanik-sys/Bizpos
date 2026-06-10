@@ -2,7 +2,12 @@ import { z } from "zod";
 
 export const settingsFormSchema = z.object({
   return_privacy_policy: z.string().optional(),
-  vat_rate: z.string().optional(),
+  vat_rate: z
+    .string()
+    .optional()
+    .refine((value) => !value || !Number.isNaN(Number(value)), {
+      message: "VAT rate must be a valid number",
+    }),
   brand_name: z.string().optional(),
   logo_image: z
     .array(
@@ -10,9 +15,6 @@ export const settingsFormSchema = z.object({
         message: "File size must be less than 4MB",
       }),
     )
-    .min(1, {
-      message: "Logo image is required",
-    })
     .max(1, {
       message: "Maximum 1 file is allowed",
     }),
@@ -22,9 +24,6 @@ export const settingsFormSchema = z.object({
         message: "File size must be less than 4MB",
       }),
     )
-    .min(1, {
-      message: "Logo image is required",
-    })
     .max(1, {
       message: "Maximum 1 file is allowed",
     }),

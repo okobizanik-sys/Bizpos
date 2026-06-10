@@ -25,7 +25,38 @@ const isConnectionError = (error: unknown) => {
   );
 };
 
-export async function createSettings(data: Settings) {
+const normalizeSettingsData = (data: Partial<Settings>) => {
+  const normalized: Partial<Settings> = {};
+
+  if (typeof data.return_privacy_policy === "string") {
+    const value = data.return_privacy_policy.trim();
+    if (value) normalized.return_privacy_policy = value;
+  }
+
+  if (typeof data.brand_name === "string") {
+    const value = data.brand_name.trim();
+    if (value) normalized.brand_name = value;
+  }
+
+  if (typeof data.logo_image_url === "string") {
+    const value = data.logo_image_url.trim();
+    if (value) normalized.logo_image_url = value;
+  }
+
+  if (typeof data.login_image_url === "string") {
+    const value = data.login_image_url.trim();
+    if (value) normalized.login_image_url = value;
+  }
+
+  if (data.vat_rate !== undefined && data.vat_rate !== null) {
+    const value = Number(data.vat_rate);
+    if (!Number.isNaN(value)) normalized.vat_rate = value;
+  }
+
+  return normalized;
+};
+
+export async function createSettings(data: Partial<Settings>) {
   return await prisma.$transaction(async (tx) => {
     try {
       const existingSetting = await tx.settings_data.findFirst();
@@ -35,7 +66,9 @@ export async function createSettings(data: Settings) {
         logger.info("Existing settings found and deleted.");
       }
 
-      const setting = await tx.settings_data.create({ data: data as any });
+      const setting = await tx.settings_data.create({
+        data: normalizeSettingsData(data) as any,
+      });
       logger.info(`Settings created successfully: ${setting.id}`);
       return setting as unknown as Settings;
     } catch (error) {
@@ -53,7 +86,8 @@ export async function getSettings(): Promise<Settings[]> {
   try {
     const settingsData = await prisma.settings_data.findMany();
     cachedSettingsList = settingsData as unknown as Settings[];
-    cachedSetting = (settingsData.at(-1) as unknown as Settings) || EMPTY_SETTINGS;
+    cachedSetting =
+      (settingsData.at(-1) as unknown as Settings) || EMPTY_SETTINGS;
     lastSettingsReadAt = Date.now();
     return cachedSettingsList;
   } catch (error) {
@@ -74,11 +108,13 @@ export async function getSetting(): Promise<Settings> {
 
   try {
     const setting = await prisma.settings_data.findFirst({
-      orderBy: { id: "desc" }
+      orderBy: { id: "desc" },
     });
 
     cachedSetting = (setting as unknown as Settings) || EMPTY_SETTINGS;
-    cachedSettingsList = setting ? [setting as unknown as Settings] : cachedSettingsList;
+    cachedSettingsList = setting
+      ? [setting as unknown as Settings]
+      : cachedSettingsList;
     lastSettingsReadAt = Date.now();
     return cachedSetting;
   } catch (error) {
@@ -92,14 +128,33 @@ export async function getSetting(): Promise<Settings> {
   }
 }
 
-export async function updateSettings(id: number, data: Settings) {
+export async function getSettingById(id: number): Promise<Settings | null> {
+  try {
+    const setting = await prisma.settings_data.findUnique({ where: { id } });
+    return (setting as unknown as Settings) || null;
+  } catch (error) {
+    logger.error(`Failed to read settings_data with id ${id}:`, error);
+    return null;
+  }
+}
+
+export async function updateSettings(id: number, data: Partial<Settings>) {
+  const normalizedData = normalizeSettingsData(data);
+
+  if (Object.keys(normalizedData).length === 0) {
+    const currentSetting = await getSettingById(id);
+    return currentSetting as Settings;
+  }
+
   const setting = await prisma.settings_data.update({
     where: { id },
-    data: data as any,
+    data: normalizedData as any,
   });
 
   cachedSetting = (setting as unknown as Settings) || EMPTY_SETTINGS;
-  cachedSettingsList = setting ? [setting as unknown as Settings] : EMPTY_SETTINGS_LIST;
+  cachedSettingsList = setting
+    ? [setting as unknown as Settings]
+    : EMPTY_SETTINGS_LIST;
   lastSettingsReadAt = Date.now();
   return setting as unknown as Settings;
 }

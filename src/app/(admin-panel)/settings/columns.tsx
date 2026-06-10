@@ -5,8 +5,8 @@ import { Settings } from "@/types/shared";
 import { formatDate } from "date-fns";
 import React from "react";
 import Image from "next/image";
-import { SettingDetailSheet } from "./details";
 import { fileUrlGenerator } from "@/utils/helpers";
+import { SettingDetailSheet } from "./details";
 
 export const columns: ColumnDef<Settings>[] = [
   {

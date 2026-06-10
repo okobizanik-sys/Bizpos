@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ImagePlus, MoreHorizontal, SquarePlus, TrashIcon } from "lucide-react";
+import { ImagePlus, MoreHorizontal, TrashIcon } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +33,7 @@ import { dropZoneConfig, settingsFormSchema } from "./form-schema";
 import { deleteSettingOnConfirmed, updateSettingFormAction } from "./actions";
 import { Label } from "@/components/ui/label";
 import ReactQuill from "react-quill";
+import { useRouter } from "next/navigation";
 
 interface Props {
   setting: Settings;
@@ -42,6 +43,7 @@ export function SettingDetailSheet({ setting }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [selectedLogo, setSelectedLogo] = useState(
     fileUrlGenerator(setting.logo_image_url || ""),
   );
@@ -49,13 +51,14 @@ export function SettingDetailSheet({ setting }: Props) {
     fileUrlGenerator(setting.login_image_url || ""),
   );
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof settingsFormSchema>>({
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
-      return_privacy_policy: setting?.return_privacy_policy,
-      brand_name: String(setting?.brand_name),
-      vat_rate: String(setting?.vat_rate),
+      return_privacy_policy: setting?.return_privacy_policy || "",
+      brand_name: setting?.brand_name || "",
+      vat_rate: setting?.vat_rate ? String(setting.vat_rate) : "",
       logo_image: [],
       login_image: [],
     },
@@ -81,24 +84,43 @@ export function SettingDetailSheet({ setting }: Props) {
 
   const onSubmit = async (values: z.infer<typeof settingsFormSchema>) => {
     setUpdating(true);
+    setSubmitError("");
     const formData = makeFormData(values);
+
     try {
-      await updateSettingFormAction(Number(setting.id), formData);
+      const result = await updateSettingFormAction(
+        Number(setting.id),
+        formData,
+      );
+
+      if (!result.success) {
+        const message = result.message || "Failed to update setting.";
+        setSubmitError(message);
+        toast({
+          title: "Failed to update setting",
+          description: message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Setting updated successfully",
-        description: `Setting has been updated successfully`,
+        description: result.message || "Setting has been updated successfully",
         variant: "default",
       });
       setSheetOpen(false);
+      router.refresh();
     } catch (error: any) {
+      const message = error?.message || "Failed to update setting.";
+      setSubmitError(message);
       toast({
         title: "Failed to update setting",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     } finally {
       setUpdating(false);
-      window.location.reload();
     }
   };
 
@@ -106,17 +128,29 @@ export function SettingDetailSheet({ setting }: Props) {
     if (await confirmation("Are you sure you want to delete this setting?")) {
       setDeleting(true);
       const deletedSetting = await deleteSettingOnConfirmed(Number(setting.id));
-      if (deletedSetting) {
+
+      if (deletedSetting.success) {
         toast({
           title: "Setting deleted successfully",
-          description: `Setting has been deleted successfully`,
+          description:
+            deletedSetting.data?.message ||
+            "Setting has been deleted successfully",
           variant: "default",
         });
         setSheetOpen(false);
+        router.refresh();
+      } else {
+        const message = deletedSetting.data || "Failed to delete setting.";
+        setSubmitError(String(message));
+        toast({
+          title: "Failed to delete setting",
+          description: String(message),
+          variant: "destructive",
+        });
       }
+
+      setDeleting(false);
     }
-    setDeleting(false);
-    window.location.reload();
   };
 
   return (
@@ -138,10 +172,7 @@ export function SettingDetailSheet({ setting }: Props) {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-2">
               <div className="w-full h-full">
-                <Label>
-                  Login Page Image (1600px * 80px){" "}
-                  <b className="text-red-500">*</b>
-                </Label>
+                <Label>Login Page Image (1600px * 80px)</Label>
                 {selectedLoginImage ? (
                   <Image
                     src={selectedLoginImage}
@@ -176,6 +207,7 @@ export function SettingDetailSheet({ setting }: Props) {
                       </FileInput>
                       {field.value && field.value.length > 0 && (
                         <Button
+                          type="button"
                           variant="ghost"
                           className="ml-1 h-6 w-6 p-0"
                           onClick={() => form.setValue("login_image", [])}
@@ -189,9 +221,7 @@ export function SettingDetailSheet({ setting }: Props) {
               </div>
 
               <div className="w-full h-full">
-                <Label>
-                  Logo Upload (150px * 40px) <b className="text-red-500">*</b>
-                </Label>
+                <Label>Logo Upload (150px * 40px)</Label>
                 {selectedLogo ? (
                   <Image
                     src={selectedLogo}
@@ -226,6 +256,7 @@ export function SettingDetailSheet({ setting }: Props) {
                       </FileInput>
                       {field.value && field.value.length > 0 && (
                         <Button
+                          type="button"
                           variant="ghost"
                           className="ml-1 h-6 w-6 p-0"
                           onClick={() => form.setValue("logo_image", [])}
@@ -272,6 +303,7 @@ export function SettingDetailSheet({ setting }: Props) {
                 )}
               />
             </div>
+
             <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
               <FormField
                 control={form.control}
@@ -303,6 +335,9 @@ export function SettingDetailSheet({ setting }: Props) {
                 Delete
               </Button>
             </div>
+            {submitError ? (
+              <p className="mt-2 text-sm text-red-500">{submitError}</p>
+            ) : null}
           </form>
         </Form>
       </SheetContent>

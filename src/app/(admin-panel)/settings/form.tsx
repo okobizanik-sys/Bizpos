@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { dropZoneConfig, settingsFormSchema } from "./form-schema";
 import { SettingsFormAction } from "./actions";
 import {
@@ -48,6 +47,7 @@ import {
 } from "@/components/ui/sheet";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { useRouter } from "next/navigation";
 
 interface Props {
   sheetOpen: boolean;
@@ -60,7 +60,9 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
   const [selectedLogo, setSelectedLogo] = React.useState<string>("");
   const [selectedLoginImage, setSelectedLoginImage] =
     React.useState<string>("");
+  const [submitError, setSubmitError] = React.useState("");
   const { toast } = useToast();
+  const router = useRouter();
 
   React.useEffect(() => {
     fetchSetting().then((data) => {
@@ -103,29 +105,40 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
 
   const onSubmit = async (values: z.infer<typeof settingsFormSchema>) => {
     setLoading(true);
+    setSubmitError("");
     const formData = makeFormData(values);
     try {
       const result = await SettingsFormAction(formData);
       if (result.success) {
         toast({
-          title: "Settings created successfully",
-          description: `Settings has been created successfully`,
+          title: "Settings saved successfully",
+          description: result.message || "Settings has been saved successfully",
           variant: "default",
         });
         form.reset();
         setSelectedLoginImage("");
         setSelectedLogo("");
-        setSheetOpen((prev) => !prev);
+        setSheetOpen(false);
+        router.refresh();
+      } else {
+        const message = result.message || "Failed to save settings.";
+        setSubmitError(message);
+        toast({
+          title: "Unable to save settings",
+          description: message,
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
+      const message = error?.message || "Failed to save settings.";
+      setSubmitError(message);
       toast({
-        title: "Failed to create settings",
-        description: error.message,
+        title: "Failed to save settings",
+        description: message,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-      window.location.reload();
     }
   };
 
@@ -149,10 +162,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="mb-4 grid grid-cols-1 items-center gap-2 md:grid-cols-2">
                 <div className="w-full h-full">
-                  <Label>
-                    Login Page Image (1600px * 800px){" "}
-                    <b className="text-red-500">*</b>
-                  </Label>
+                  <Label>Login Page Image (1600px * 800px)</Label>
                   {selectedLoginImage && (
                     <Image
                       src={selectedLoginImage}
@@ -185,6 +195,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                         </FileInput>
                         {field.value && field.value.length > 0 && (
                           <Button
+                            type="button"
                             variant="ghost"
                             className="ml-1 h-6 w-6 p-0"
                             onClick={() => form.setValue("login_image", [])}
@@ -198,9 +209,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                 </div>
 
                 <div className="w-full h-full">
-                  <Label>
-                    Logo Upload (150px * 40px) <b className="text-red-500">*</b>
-                  </Label>
+                  <Label>Logo Upload (150px * 40px)</Label>
                   {selectedLogo && (
                     <Image
                       src={selectedLogo}
@@ -233,6 +242,7 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
                         </FileInput>
                         {field.value && field.value.length > 0 && (
                           <Button
+                            type="button"
                             variant="ghost"
                             className="ml-1 h-6 w-6 p-0"
                             onClick={() => form.setValue("logo_image", [])}
@@ -300,9 +310,12 @@ export const SettingsForm: React.FC<Props> = ({ sheetOpen, setSheetOpen }) => {
 
               <div className="mt-4 flex justify-end gap-2">
                 <Button type="submit" variant="default" loading={loading}>
-                  Create
+                  Create Setting
                 </Button>
               </div>
+              {submitError ? (
+                <p className="mt-2 text-sm text-red-500">{submitError}</p>
+              ) : null}
             </form>
           </Form>
         </div>
