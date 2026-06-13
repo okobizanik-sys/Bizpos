@@ -3,7 +3,23 @@
 import { Label } from "@radix-ui/react-label";
 import React, { FormEvent } from "react";
 import { StockSelector } from "../stock-transfer/transfer-products/stock-selector";
-import { PlusSquare, Printer, QrCode, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  PlusSquare,
+  Printer,
+  QrCode,
+  Trash2,
+} from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { usePOSStore } from "@/hooks/store/use-pos-store";
 import { useBranch } from "@/hooks/store/use-branch";
 import { getDamagedStocks, getStocks, getStocksCount } from "@/services/stock";
@@ -34,7 +50,17 @@ import { useReactToPrint } from "react-to-print";
 import DamageProductSlip from "@/components/print-pages/damaged-product-slip";
 import { Card } from "@/components/ui/card";
 
-export default function DamageProducts() {
+interface DamageProductsTableProps {
+  search?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+export default function DamageProductsTable({
+  search,
+  fromDate,
+  toDate,
+}: DamageProductsTableProps) {
   const branch = useStore(useBranch, (state) => state.branch);
   const { itemList, addItem, removeItem, setOrderId, updateItemQty } =
     usePOSStore();
@@ -42,7 +68,7 @@ export default function DamageProducts() {
   const [stocks, setStocks] = React.useState<StockPayload[]>([]);
   const [damagedStocks, setDamagedStocks] = React.useState<POSItem[]>([]);
   const [selectedBarcode, setSelectedBarcode] = React.useState<string | null>(
-    null
+    null,
   );
   const [qtyLimit, setQtyLimit] = React.useState<number>(0);
   const [selectedQty, setSelectedQty] = React.useState<number>(0);
@@ -51,12 +77,12 @@ export default function DamageProducts() {
   const { toast } = useToast();
   const printerRef = React.useRef(null);
 
-
-
-
   const handlePrinter = useReactToPrint({
     content: () => printerRef.current,
   });
+
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
 
   React.useEffect(() => {
     if (branch) {
@@ -76,7 +102,47 @@ export default function DamageProducts() {
     }
   }, [branch]);
 
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, fromDate, toDate, branch]);
 
+  const filteredDamagedStocks = React.useMemo(() => {
+    return damagedStocks.filter((item: any) => {
+      let match = true;
+
+      if (search) {
+        const q = search.toLowerCase();
+        match =
+          match &&
+          (item.barcode?.toLowerCase().includes(q) ||
+            item.name?.toLowerCase().includes(q) ||
+            item.categoryName?.toLowerCase().includes(q) ||
+            item.branchName?.toLowerCase().includes(q));
+      }
+
+      if (fromDate) {
+        const created = item.created_at ? new Date(item.created_at) : null;
+        if (created) match = match && created >= fromDate;
+      }
+
+      if (toDate) {
+        const created = item.created_at ? new Date(item.created_at) : null;
+        const endOfDay = new Date(toDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (created) match = match && created <= endOfDay;
+      }
+
+      return match;
+    });
+  }, [damagedStocks, search, fromDate, toDate]);
+
+  const totalItems = filteredDamagedStocks.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+  const paginatedDamagedStocks = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredDamagedStocks.slice(startIndex, startIndex + pageSize);
+  }, [filteredDamagedStocks, currentPage, pageSize]);
 
   const barcodeSelected = (code: string | null | void) => {
     if (code) {
@@ -126,7 +192,6 @@ export default function DamageProducts() {
         variant: "default",
       });
     } catch (error: any) {
-
       toast({
         title: "Failed to add damaged product",
         description: error.message,
@@ -137,15 +202,18 @@ export default function DamageProducts() {
     }
   };
 
-  const totals = damagedStocks.reduce(
-    (acc: any, item) => {
-      acc.stockValue += Number(item.cost || 0);
-      acc.sellValue += Number(item.selling_price || 0);
-      acc.totalQty += Number(item.quantity || 0);
-      return acc;
-    },
-    { stockValue: 0, sellValue: 0, totalQty: 0 }
-  );
+  const totals = React.useMemo(() => {
+    return filteredDamagedStocks.reduce(
+      (acc: any, item) => {
+        acc.stockValue += Number(item.cost || 0) * Number(item.quantity || 0);
+        acc.sellValue +=
+          Number(item.selling_price || 0) * Number(item.quantity || 0);
+        acc.totalQty += Number(item.quantity || 0);
+        return acc;
+      },
+      { stockValue: 0, sellValue: 0, totalQty: 0 },
+    );
+  }, [filteredDamagedStocks]);
 
   return (
     <>
@@ -206,7 +274,7 @@ export default function DamageProducts() {
                       onChange={(e) =>
                         updateItemQty(
                           item.barcode,
-                          parseInt(e.target.value, 10) || 1
+                          parseInt(e.target.value, 10) || 1,
                         )
                       }
                     />
@@ -263,21 +331,34 @@ export default function DamageProducts() {
           </TableHeader>
 
           <TableBody>
-            {damagedStocks.map((item, index) => (
-              <TableRow key={item.barcode}>
-                <TableCell className="py-2">{index + 1}</TableCell>
-                <TableCell className="py-2">{item.barcode}</TableCell>
-                <TableCell className="py-2 w-60">{item.name}</TableCell>
-                <TableCell className="py-2 w-60">{item.categoryName}</TableCell>
-                <TableCell className="py-2 w-60">{Number(item.cost)}</TableCell>
-                <TableCell className="py-2">
-                  {Number(item.selling_price)}
-                </TableCell>
-                <TableCell className="py-2 w-20 flex gap-2 items-center">
-                  {item.quantity}
+            {paginatedDamagedStocks.length > 0 ? (
+              paginatedDamagedStocks.map((item, index) => {
+                const globalIndex = (currentPage - 1) * pageSize + index + 1;
+                return (
+                  <TableRow key={item.id || item.barcode || index}>
+                    <TableCell className="py-2">{globalIndex}</TableCell>
+                    <TableCell className="py-2">{item.barcode}</TableCell>
+                    <TableCell className="py-2 w-60">{item.name}</TableCell>
+                    <TableCell className="py-2 w-60">{item.categoryName}</TableCell>
+                    <TableCell className="py-2 w-60">
+                      {Number(item.cost || 0) * Number(item.quantity || 0)}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {Number(item.selling_price || 0) * Number(item.quantity || 0)}
+                    </TableCell>
+                    <TableCell className="py-2 w-20 flex gap-2 items-center">
+                      {item.quantity}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  No damaged products found.
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
           <TableFooter>
             <TableRow>
@@ -290,12 +371,83 @@ export default function DamageProducts() {
             </TableRow>
           </TableFooter>
         </Table>
-      </Card>
 
+        <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-3 sm:flex-row sm:gap-8 mt-4 border-t">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8 w-full justify-between">
+            <div className="text-sm font-medium text-muted-foreground">
+              Total {totalItems} items
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                aria-label="Go to first page"
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                aria-label="Go to previous page"
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <span className="text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                aria-label="Go to next page"
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                aria-label="Go to last page"
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Rows per page</span>
+              <Select
+                onValueChange={(value) => {
+                  setPageSize(parseInt(value, 10));
+                  setCurrentPage(1);
+                }}
+                value={pageSize.toString()}
+              >
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 20, 30, 40, 50, 100].map((option) => (
+                    <SelectItem key={option} value={option.toString()}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <div className="hidden">
         <DamageProductSlip
-          damagedStocks={damagedStocks}
+          damagedStocks={filteredDamagedStocks}
           existingBranch={branch}
           ref={printerRef}
         />

@@ -1,79 +1,86 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout";
-import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Navbar } from "@/components/admin-panel/navbar";
 import { getDamagedStocks } from "@/services/stock";
-import { makeBDPrice } from "@/utils/helpers";
+import { FilterDamageListForm } from "./filter";
+import { DamageListDashboard } from "./dashboard";
+import { DamageListTable } from "./table";
 
 export const revalidate = 0;
 
-export default async function DamagedProductsListPage() {
-  const damagedStocks = await getDamagedStocks({
-    where: {},
-    distinct: ["barcode"],
+interface Props {
+  searchParams: {
+    [key: string]: string | string[] | undefined;
+  };
+}
+
+export default async function DamagedProductsListPage({ searchParams }: Props) {
+  const search = searchParams.search as string | undefined;
+  const fromDate = searchParams.fromDate
+    ? new Date(searchParams.fromDate as string)
+    : undefined;
+  const toDate = searchParams.toDate
+    ? new Date(searchParams.toDate as string)
+    : undefined;
+
+  // Build the where clause for the query
+  const where: Record<string, any> = {};
+
+  const damagedStocksRaw = await getDamagedStocks({
+    where,
   });
 
-  return (
-    <ContentLayout title="Damaged Products">
-      <Card className="rounded-lg p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">All Branch Damaged Products</h2>
-          <span className="text-xs text-muted-foreground">
-            Total Results: {damagedStocks.length}
-          </span>
-        </div>
+  // Serialize BigInt fields from Prisma before passing to client components
+  const damagedStocks = damagedStocksRaw.map((item: any) => ({
+    ...item,
+    id: item.id !== undefined ? Number(item.id) : undefined,
+    product_id:
+      item.product_id !== undefined ? Number(item.product_id) : undefined,
+    branchId:
+      item.branchId !== undefined ? Number(item.branchId) : undefined,
+    created_at: item.created_at ? String(item.created_at) : undefined,
+    updated_at: item.updated_at ? String(item.updated_at) : undefined,
+  }));
 
-        <Table className="rounded-lg overflow-hidden">
-          <TableHeader className="bg-primary">
-            <TableRow>
-              <TableHead className="h-8 text-white">Branch</TableHead>
-              <TableHead className="h-8 text-white">Barcode</TableHead>
-              <TableHead className="h-8 text-white">Product</TableHead>
-              <TableHead className="h-8 text-white">Category</TableHead>
-              <TableHead className="h-8 text-white">Variant</TableHead>
-              <TableHead className="h-8 text-white">Qty</TableHead>
-              <TableHead className="h-8 text-white">Stock Value</TableHead>
-              <TableHead className="h-8 text-white">Sell Value</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {damagedStocks.length > 0 ? (
-              damagedStocks.map((item) => (
-                <TableRow key={`${item.branchId}-${item.barcode}`}>
-                  <TableCell>{item.branchName || "-"}</TableCell>
-                  <TableCell>{item.barcode}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.categoryName || "-"}</TableCell>
-                  <TableCell>
-                    {item.colorName || "-"} - {item.sizeName || "-"}
-                  </TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>
-                    {makeBDPrice(Number(item.quantity) * Number(item.cost || 0))}
-                  </TableCell>
-                  <TableCell>
-                    {makeBDPrice(
-                      Number(item.quantity) * Number(item.selling_price || 0)
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
-                  No damaged products found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </ContentLayout>
+  // Server-side filtering (by barcode, product name, category, branch, dates)
+  const filtered = damagedStocks.filter((item: any) => {
+    let match = true;
+
+    if (search) {
+      const q = search.toLowerCase();
+      match =
+        match &&
+        (item.barcode?.toLowerCase().includes(q) ||
+          item.name?.toLowerCase().includes(q) ||
+          item.categoryName?.toLowerCase().includes(q) ||
+          item.branchName?.toLowerCase().includes(q));
+    }
+
+    if (fromDate) {
+      const created = item.created_at ? new Date(item.created_at) : null;
+      if (created) match = match && created >= fromDate;
+    }
+
+    if (toDate) {
+      const created = item.created_at ? new Date(item.created_at) : null;
+      const endOfDay = new Date(toDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (created) match = match && created <= endOfDay;
+    }
+
+    return match;
+  });
+
+  const currentFilters = {
+    search,
+    fromDate,
+    toDate,
+  };
+
+  return (
+    <>
+      <Navbar title="Damaged Products List" />
+      <FilterDamageListForm currentFilters={currentFilters} />
+      <DamageListDashboard data={filtered} />
+      <DamageListTable data={filtered} />
+    </>
   );
 }
